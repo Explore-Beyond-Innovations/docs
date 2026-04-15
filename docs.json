@@ -1,0 +1,87 @@
+{
+  "$schema": "https://mintlify.com/docs.json",
+  "name": "ProofBridge",
+  "theme": "luma",
+  "logo": {
+    "light": "https://media.brand.dev/01d04b17-1525-498f-a261-b4fbd27e1404.svg",
+    "dark": "https://media.brand.dev/01d04b17-1525-498f-a261-b4fbd27e1404.svg"
+  },
+  "favicon": "https://icons.duckduckgo.com/ip3/proof-bridge.vercel.app.ico",
+  "colors": {
+    "primary": "#ffffff",
+    "light": "#ffffff",
+    "dark": "#ffffff"
+  },
+  "navbar": {
+    "primary": {
+      "type": "github",
+      "href": "https://github.com/Explore-Beyond-Innovations/ProofBridge"
+    }
+  },
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "how-it-works",
+              "quickstart"
+            ]
+          },
+          {
+            "group": "Core Concepts",
+            "pages": [
+              "concepts/makers-and-bridgers",
+              "concepts/liquidity-ads",
+              "concepts/zero-knowledge-proofs",
+              "concepts/merkle-mountain-range",
+              "concepts/supported-networks"
+            ]
+          },
+          {
+            "group": "Guides",
+            "pages": [
+              "guides/connect-wallet",
+              "guides/bridge-tokens",
+              "guides/provide-liquidity",
+              "guides/manage-ads",
+              "guides/track-orders"
+            ]
+          },
+          {
+            "group": "Reference",
+            "pages": [
+              "reference/smart-contracts",
+              "reference/security-model",
+              "reference/faq"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "Overview",
+            "pages": [
+              "api/overview",
+              "api/authentication"
+            ]
+          },
+          {
+            "group": "Endpoints",
+            "pages": [
+              "api/ads",
+              "api/trades",
+              "api/routes",
+              "api/chains"
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

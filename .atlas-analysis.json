@@ -1,0 +1,119 @@
+{
+  "projectType": "saas",
+  "projectName": "ProofBridge",
+  "projectDescription": "A peer-to-peer cross-chain bridge platform that uses zero-knowledge proofs and user-driven consensus to enable trustless asset transfers between blockchain networks without relying on centralized relayers or custodians.",
+  "theme": "luma",
+  "primaryColor": "#ffffff",
+  "lightColor": null,
+  "darkColor": "#ffffff",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "how-it-works",
+              "quickstart"
+            ]
+          },
+          {
+            "group": "Core Concepts",
+            "pages": [
+              "concepts/makers-and-bridgers",
+              "concepts/liquidity-ads",
+              "concepts/zero-knowledge-proofs",
+              "concepts/merkle-mountain-range",
+              "concepts/supported-networks"
+            ]
+          },
+          {
+            "group": "Guides",
+            "pages": [
+              "guides/connect-wallet",
+              "guides/bridge-tokens",
+              "guides/provide-liquidity",
+              "guides/manage-ads",
+              "guides/track-orders"
+            ]
+          },
+          {
+            "group": "Reference",
+            "pages": [
+              "reference/smart-contracts",
+              "reference/security-model",
+              "reference/faq"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "Overview",
+            "pages": [
+              "api/overview",
+              "api/authentication"
+            ]
+          },
+          {
+            "group": "Endpoints",
+            "pages": [
+              "api/ads",
+              "api/trades",
+              "api/routes",
+              "api/chains"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Peer-to-peer cross-chain token transfers without centralized relayers",
+    "Zero-knowledge proof validation for trustless settlement",
+    "Liquidity advertisement marketplace for makers",
+    "Multi-chain support: Ethereum Sepolia, Hedera Testnet, and Stellar",
+    "EIP-712 signed orders bound cryptographically to chain and contract",
+    "Merkle Mountain Range (MMR) for tamper-proof order history",
+    "SIWE (Sign-In With Ethereum) wallet authentication",
+    "Double-spend prevention via cryptographic nullifiers"
+  ],
+  "publicApiSurface": [
+    "POST /v1/auth/challenge",
+    "POST /v1/auth/login",
+    "POST /v1/auth/refresh",
+    "GET /v1/ads",
+    "GET /v1/ads/:id",
+    "POST /v1/ads/create",
+    "POST /v1/ads/:id/fund",
+    "POST /v1/ads/:id/withdraw",
+    "POST /v1/ads/:id/confirm",
+    "PATCH /v1/ads/:id/update",
+    "POST /v1/ads/:id/close",
+    "GET /v1/trades/all",
+    "GET /v1/trades/:id",
+    "POST /v1/trades/create",
+    "GET /v1/trades/:id/params",
+    "POST /v1/trades/:id/lock",
+    "POST /v1/trades/:id/unlock",
+    "POST /v1/trades/:id/unlock/confirm",
+    "POST /v1/trades/:id/confirm",
+    "GET /v1/routes",
+    "GET /v1/routes/:id",
+    "AdManager.createAd()",
+    "AdManager.fundAd()",
+    "AdManager.withdrawFromAd()",
+    "AdManager.closeAd()",
+    "AdManager.lockForOrder()",
+    "AdManager.unlock()",
+    "OrderPortal.createOrder()",
+    "OrderPortal.unlock()",
+    "MerkleManager.appendOrderHash()",
+    "MerkleManager.getRootHash()",
+    "MerkleManager.verifyProof()"
+  ]
+}

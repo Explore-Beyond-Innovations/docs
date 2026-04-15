@@ -1,0 +1,93 @@
+---
+title: "Liquidity ads: how the ProofBridge marketplace works"
+description: "A liquidity ad is an on-chain offer from a Maker to provide cross-chain liquidity. Learn how ads are created, matched, and settled on ProofBridge."
+---
+
+A liquidity ad is the on-chain offer that makes peer-to-peer bridging possible. When a Maker posts an ad, they're committing to exchange a specific token on one chain for a specific token on another, at a stated rate and up to a stated amount. Bridgers browse available ads and select the one that matches their desired route.
+
+## What a liquidity ad contains
+
+Every ad specifies:
+
+- **Source chain and token** — the chain and token a Bridger must deposit
+- **Destination chain and token** — the chain and token the Maker provides
+- **Available amount** — the total liquidity the Maker is offering
+- **Rate** — the exchange ratio the Maker is willing to accept
+- **Ad ID** — a unique identifier used to reference the ad in orders and proofs
+
+These parameters are stored on-chain in the `AdManager` contract and are publicly visible to all Bridgers browsing the marketplace.
+
+## Ad lifecycle
+
+<Steps>
+  <Step title="Create">
+    The Maker calls `createAd` on the `AdManager` contract, specifying the token pair, destination chain, and rate. The ad is now visible in the marketplace but holds no liquidity yet.
+  </Step>
+  <Step title="Fund">
+    The Maker calls `fundAd` to deposit destination-chain tokens into the contract. Only funded ads can be matched with Bridger orders.
+  </Step>
+  <Step title="Matched by a Bridger">
+    A Bridger selects the ad and deposits source-chain tokens on the `OrderPortal`. A cryptographically signed order is created, binding the trade terms to both chain IDs and contract addresses.
+  </Step>
+  <Step title="Locked for order">
+    The Maker calls `lockForOrder`, reserving a portion of their ad's liquidity exclusively for this trade. The locked amount is appended to the on-chain Merkle Mountain Range as a commitment.
+  </Step>
+  <Step title="Settled">
+    The relayer generates a ZK proof and submits it to both chains. Each chain's `Verifier` contract validates the proof and releases funds to the respective recipients simultaneously.
+  </Step>
+  <Step title="Closed">
+    After all pending orders settle, the Maker can call `closeAd` to withdraw any remaining unlocked funds and permanently close the ad.
+  </Step>
+</Steps>
+
+<Note>
+  A Maker can withdraw unused (unlocked) funds at any time using `withdrawFromAd`. Locked funds remain reserved until an order settles or times out.
+</Note>
+
+## Browsing the marketplace
+
+As a Bridger, you can filter available ads by:
+
+- **Source chain** — the chain you're depositing on
+- **Destination chain** — the chain you want to receive tokens on
+- **Token pair** — the specific tokens being exchanged
+- **Rate** — how much destination token you receive per unit of source token deposited
+
+The marketplace shows only funded ads with sufficient liquidity to fulfill your order. Once you select an ad, the trade terms are locked in via an EIP-712 signed order that both parties cannot alter.
+
+<Tip>
+  Compare rates across multiple ads before selecting one. Since Makers compete for Bridger volume, you'll often find favorable rates during periods of high liquidity.
+</Tip>
+
+## How settlement works
+
+Settlement releases tokens to both parties at the same time, with no manual coordination required.
+
+<AccordionGroup>
+  <Accordion title="What happens on the destination chain (AdManager)">
+    The relayer submits a ZK proof to the `AdManager` on the destination chain. The `Verifier` contract checks that the proof correctly attests to a valid deposit on the source chain. If valid, the Maker's locked tokens are released directly to the Bridger's specified recipient address.
+  </Accordion>
+  <Accordion title="What happens on the source chain (OrderPortal)">
+    The relayer also submits a proof to the `OrderPortal` on the source chain. Once verified, the Bridger's deposited source tokens are released to the Maker's designated recipient address.
+  </Accordion>
+  <Accordion title="What prevents the same proof from being used twice">
+    Each proof consumes a **nullifier** — a one-time cryptographic value derived from the trade. Once a nullifier is recorded on-chain, any attempt to replay the same proof is rejected. This is enforced independently on each chain.
+  </Accordion>
+</AccordionGroup>
+
+## Ad parameters reference
+
+| Parameter | Description |
+|---|---|
+| `adId` | Unique identifier for the ad |
+| `adToken` | Destination-chain token the Maker provides |
+| `orderToken` | Source-chain token the Bridger deposits |
+| `adChainId` | Chain ID where the ad is posted |
+| `orderChainId` | Chain ID where Bridgers deposit |
+| `balance` | Total tokens currently in the ad |
+| `locked` | Tokens reserved for in-progress orders |
+| `open` | Whether the ad accepts new orders |
+
+<Warning>
+  Do not close an ad while orders are in progress. Closing an ad withdraws all unlocked funds, but locked amounts remain reserved until their orders settle.
+</Warning>

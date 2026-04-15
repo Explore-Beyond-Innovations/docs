@@ -1,0 +1,115 @@
+---
+title: "ProofBridge security model, proofs, and trust assumptions"
+description: "Understand how ProofBridge protects your funds using EIP-712 signatures, ZK proofs, nullifiers, and on-chain Merkle trees — with no custodial risk."
+---
+
+ProofBridge is designed so you never have to trust a centralized party with your funds. Smart contracts hold all assets during settlement, zero-knowledge proofs attest to the correctness of every transfer, and cryptographic primitives prevent every known class of replay or double-spend attack. This page explains each protection and where the current trust boundary lies.
+
+---
+
+## No custodial risk
+
+Your funds are locked in the AdManager or OrderPortal smart contracts at all times. ProofBridge as a service never holds your tokens. Settlement only releases funds when a valid zero-knowledge proof is submitted and verified on-chain. If the relayer fails or goes offline, your tokens remain locked in the contract until settlement completes — they are never at risk of being taken.
+
+---
+
+## EIP-712 signed orders
+
+When you create an order, the full set of trade terms — source chain, destination chain, contract addresses, token addresses, amount, recipient, and a unique salt — are hashed together using the EIP-712 standard and signed by your wallet.
+
+This signature binds your order to exactly one set of contracts on exactly two chains. The same signed message cannot be submitted to a different chain or a different contract version without invalidating the signature. This prevents **cross-chain replay attacks** and **cross-contract replay attacks** even without including `chainId` in the EIP-712 domain, because both chain IDs and both contract addresses are explicit fields in the Order struct itself.
+
+<Note>
+  The EIP-712 domain for ProofBridge uses `name = "Proofbridge"` and `version = "1"`. Chain IDs and contract addresses are part of the Order struct, not the domain — making every field inspectable in your wallet's signing prompt.
+</Note>
+
+---
+
+## Nullifiers: preventing double-spending
+
+Every settlement consumes a **nullifier** — a Poseidon2 commitment derived from a private secret and the order hash. Once a nullifier is recorded on-chain, no one can submit another proof for the same order.
+
+The Bridger's nullifier is consumed when AdManager releases funds on the destination chain. The Maker's nullifier is consumed when OrderPortal releases funds on the source chain. Both commitments are verified independently, so neither party can replay a proof to extract funds twice.
+
+```text
+nullifierHash = poseidon2(secret_half, orderHashMod)
+```
+
+Because the secret is private, the nullifier reveals nothing about the underlying order or the identities of either party. It is purely a one-time-use token that the contract marks as spent.
+
+---
+
+## MMR integrity: a tamper-proof order ledger
+
+Every deposit into OrderPortal and every lock on AdManager appends the order hash to a **Merkle Mountain Range (MMR)** stored on-chain. The MMR uses Poseidon2 hashing — the same hash function used inside the ZK circuit — so the on-chain root can be directly referenced in a proof.
+
+Because the MMR is append-only and managed by access-controlled contracts (only AdManager and OrderPortal hold `MANAGER_ROLE`), no external party can insert, modify, or remove entries. Every order that was ever created is permanently and verifiably part of the tree.
+
+Settlement on Chain B requires an inclusion proof against Chain A's MMR root. This means the relayer cannot claim a deposit occurred that did not — it would have to forge the Merkle proof, which is computationally infeasible given the Poseidon2 hash function.
+
+---
+
+## Zero-knowledge proofs: the relayer cannot lie
+
+The ZK proof is the core settlement primitive. It proves all of the following simultaneously, without revealing private data:
+
+- The order hash exists in the MMR of the opposite chain (inclusion proof)
+- The order hash matches the trade parameters (amount, chains, tokens, recipients)
+- The nullifier was computed correctly from a private secret known only to the claimer
+- The proof targets the correct chain (a chain flag is a public input)
+
+Because the proof is validated by the Verifier contract on-chain, the relayer cannot manipulate the output. If the relayer submits a proof for a deposit that did not happen, the Verifier will reject it. If the relayer submits a proof with a tampered amount or wrong recipient, the order hash check will fail.
+
+<Warning>
+  The ZK circuit does not hide the public inputs — the order hash, MMR root, nullifier hash, and chain flag are all visible on-chain. What remains private is the secret used to compute the nullifier.
+</Warning>
+
+---
+
+## Current trust assumption: the pre-authorization relayer
+
+In the current Phase 1 design, the relayer is **stateful**. Before you create an order, the relayer pre-authorizes your transaction and maintains session state throughout settlement. This means you are trusting the relayer to:
+
+- Honestly coordinate the cross-chain flow
+- Trigger proof generation after your deposit is confirmed
+- Submit the generated proof to both chains
+
+The relayer cannot steal funds — settlement requires a valid ZK proof, and the proof is verified on-chain. However, a malicious or offline relayer could refuse to generate or submit proofs, leaving your funds locked until the situation resolves.
+
+<Note>
+  If a transfer gets stuck, your funds remain safely locked in the smart contract. Contact support to investigate relayer availability.
+</Note>
+
+---
+
+## Roadmap to trustless: BLS aggregation
+
+Phase 2 introduces **BLS signature aggregation**, which will remove the relayer trust assumption entirely.
+
+Both the Maker and the Bridger will produce BLS signatures over the agreed order hash or Merkle root. These signatures are aggregated into a single compact proof of agreement. Once BLS aggregation is live, any actor — not just the designated relayer — can submit the aggregated proof to the destination chain's OrderPortal and complete settlement.
+
+<AccordionGroup>
+  <Accordion title="Phase 1 — Pre-authorization relayer (current)">
+    The relayer is stateful and centralized. It pre-authorizes transactions, monitors confirmations, triggers proof generation, and submits proofs. You trust the relayer's liveness and honesty, but your funds cannot be stolen even if the relayer misbehaves.
+  </Accordion>
+  <Accordion title="Phase 2 — BLS aggregation (coming soon)">
+    Maker and Bridger each sign the order. Signatures are aggregated off-chain into a compact proof of agreement. Any actor can submit this aggregated proof to settle the transfer. The relayer becomes stateless and permissionless — multiple relayers can compete, improving liveness and removing the single point of failure.
+  </Accordion>
+  <Accordion title="Phase 4 — Stateless permissionless relayers">
+    With BLS fully deployed, relayer selection is open and competitive. Batching, fee markets, and cross-chain reconciliation listeners are added, completing ProofBridge's transition to a fully decentralized settlement network.
+  </Accordion>
+</AccordionGroup>
+
+---
+
+## Security properties summary
+
+| Property | Mechanism | Guaranteed today |
+|---|---|---|
+| No custodial risk | Funds locked in smart contracts | Yes |
+| Replay prevention | EIP-712 chain/contract binding + nullifiers | Yes |
+| Double-spend prevention | On-chain nullifier registry | Yes |
+| Tamper-proof order history | Append-only MMR with access control | Yes |
+| Relayer cannot lie about deposits | ZK proof verified on-chain | Yes |
+| Permissionless settlement | BLS aggregation | No (Phase 2) |
+| Multi-relayer liveness | Stateless relayer design | No (Phase 4) |

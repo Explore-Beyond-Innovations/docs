@@ -1,0 +1,105 @@
+---
+title: "How to connect your wallet to ProofBridge securely"
+description: "Connect an EVM wallet (MetaMask or WalletConnect) or a Stellar wallet to ProofBridge and authenticate using a signed SIWE message."
+---
+
+Before you can bridge tokens or provide liquidity, you need to connect a wallet. ProofBridge supports EVM-compatible wallets (such as MetaMask) for Ethereum Sepolia and Hedera Testnet, and Stellar-native wallets for the Stellar network. Authentication uses Sign-In With Ethereum (SIWE) — you sign a message to prove wallet ownership, not a transaction, so no gas is spent during login.
+
+<Note>
+  ProofBridge is live on testnet. Make sure your wallet has testnet funds before connecting. Get Sepolia ETH from the [Sepolia faucet](https://sepoliafaucet.com) and HBAR from the [Hedera faucet](https://portal.hedera.com).
+</Note>
+
+## Prerequisites
+
+- A wallet application installed and set up with at least one account
+- Testnet funds on the network you intend to use
+
+<Tabs>
+  <Tab title="EVM (MetaMask / WalletConnect)">
+    Use this flow for Ethereum Sepolia or Hedera Testnet.
+
+    <Steps>
+      <Step title="Open ProofBridge">
+        Navigate to [https://proof-bridge.vercel.app](https://proof-bridge.vercel.app) in your browser.
+      </Step>
+
+      <Step title="Click Connect wallet">
+        In the top-right corner, click **Connect wallet**. A modal appears listing supported wallet options.
+      </Step>
+
+      <Step title="Choose your wallet">
+        Select **MetaMask** to connect via browser extension, or select **WalletConnect** to scan a QR code with a mobile wallet app.
+
+        <Tip>
+          If MetaMask is not installed, your browser will redirect you to the MetaMask download page. Install the extension and create an account before returning to ProofBridge.
+        </Tip>
+      </Step>
+
+      <Step title="Approve the connection request">
+        Your wallet opens a connection prompt. Review the requested permissions and click **Connect** (MetaMask) or **Approve** (WalletConnect). ProofBridge only requests read access to your public address — it cannot initiate transactions without your signature.
+      </Step>
+
+      <Step title="Switch to the correct network">
+        If your wallet is not already on Ethereum Sepolia or Hedera Testnet, ProofBridge prompts you to switch. Click **Switch network** in the prompt and approve the network change in your wallet.
+      </Step>
+
+      <Step title="Sign the authentication message">
+        ProofBridge requests a SIWE challenge — a plain-text message containing a unique nonce, the site origin, and your address. Review the message in your wallet and click **Sign**. This proves you control the wallet without spending gas or submitting a transaction.
+
+        <Note>
+          The signed message is verified by ProofBridge and issues a session automatically. Access and refresh tokens are stored by the frontend — you do not need to manage them manually.
+        </Note>
+      </Step>
+
+      <Step title="Confirm you are signed in">
+        After signing, your wallet address appears in the top-right corner of the app. You now have an authenticated session and can browse the marketplace, create ads, or submit bridge orders.
+      </Step>
+    </Steps>
+  </Tab>
+
+  <Tab title="Stellar">
+    Use this flow for the Stellar network.
+
+    <Steps>
+      <Step title="Open ProofBridge">
+        Navigate to [https://proof-bridge.vercel.app](https://proof-bridge.vercel.app) in your browser.
+      </Step>
+
+      <Step title="Click Connect wallet">
+        In the top-right corner, click **Connect wallet** to open the wallet selection modal.
+      </Step>
+
+      <Step title="Select your Stellar wallet">
+        Choose your Stellar-compatible wallet from the list (for example, Freighter or LOBSTR).
+
+        <Tip>
+          Freighter is a browser extension wallet for Stellar. Install it from [freighter.app](https://freighter.app) if you do not have a Stellar wallet yet.
+        </Tip>
+      </Step>
+
+      <Step title="Approve the connection">
+        Your Stellar wallet prompts you to share your public key with ProofBridge. Confirm the connection.
+      </Step>
+
+      <Step title="Sign the authentication message">
+        ProofBridge sends a challenge nonce to your wallet. Sign the message to authenticate. No XLM is spent during this step.
+      </Step>
+
+      <Step title="Confirm you are signed in">
+        Your Stellar address (`G...`) appears in the top-right corner. You are now authenticated and ready to use ProofBridge on the Stellar network.
+      </Step>
+    </Steps>
+  </Tab>
+</Tabs>
+
+## What happens after connecting
+
+When you sign the authentication message, the ProofBridge relayer verifies your signature and creates a session. The frontend stores an access token and a refresh token transparently — sessions are renewed automatically, so you stay signed in without re-signing unless you explicitly disconnect.
+
+<Warning>
+  Never share your wallet's seed phrase or private key with anyone. ProofBridge will never ask for these. The only action required from you is signing a plain-text message in your wallet.
+</Warning>
+
+## Disconnect your wallet
+
+To end your session, click your wallet address in the top-right corner and select **Disconnect**. This clears your local session tokens. Your on-chain funds and positions are unaffected.

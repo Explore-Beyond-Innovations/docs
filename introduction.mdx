@@ -1,0 +1,75 @@
+---
+title: "Introduction to ProofBridge: P2P Cross-Chain Bridge"
+description: "ProofBridge is a peer-to-peer cross-chain bridge secured by zero-knowledge proofs. Move assets across chains with no custodians or centralized relayers."
+---
+
+ProofBridge lets you transfer assets between blockchain networks by connecting directly with a counterparty — no centralized custodian holds your funds, and no trusted committee approves your transaction. Settlement is enforced entirely by cryptographic proofs verified on-chain.
+
+## What you can do with ProofBridge
+
+ProofBridge supports two roles. You can use ProofBridge as a **Bridger** when you want to move assets from one chain to another, or as a **Maker** when you want to earn by providing cross-chain liquidity.
+
+<CardGroup cols={2}>
+  <Card title="Bridge assets" icon="arrow-right-arrow-left">
+    Deposit tokens on one chain and receive equivalent tokens on another. No registration, no KYC — just connect your wallet.
+  </Card>
+  <Card title="Provide liquidity" icon="droplet">
+    Post a liquidity ad on your chosen chain and earn fees whenever a Bridger uses your liquidity to settle a transfer.
+  </Card>
+</CardGroup>
+
+## Key benefits
+
+**Trustless settlement.** Funds are released only after a zero-knowledge proof confirms both sides of the trade are valid. Neither party can take the other's funds without completing their end of the deal.
+
+**Peer-to-peer matching.** Bridgers and Makers interact directly through on-chain contracts. There is no bridge operator controlling liquidity pools or deciding which transfers to process.
+
+**No registration required.** Signing in with your wallet is all the authentication you need — either via Sign-In With Ethereum (SIWE) for EVM wallets or a Stellar wallet signature.
+
+**Non-custodial.** Your tokens are locked in auditable smart contracts, not held by a third party. The contracts release funds only when the ZK proof passes on-chain verification.
+
+## Supported networks
+
+ProofBridge is currently live on the following testnets:
+
+| Network | Chain ID | Role |
+|---|---|---|
+| Ethereum Sepolia | 11155111 | Source or destination chain |
+| Hedera Testnet | 296 | Source or destination chain |
+| Stellar Testnet | — | Source or destination chain |
+
+<Note>
+  ProofBridge is currently deployed on testnets. Mainnet deployments are on the roadmap. Use testnet funds only.
+</Note>
+
+### Active bridging routes
+
+The two live routes for native token bridging are:
+
+- **ETH (Sepolia) ↔ wETH (Hedera)** — ETH is automatically wrapped to WETH on deposit and unwrapped on withdrawal.
+- **HBAR (Hedera) ↔ wHBAR (Sepolia)** — HBAR is automatically wrapped to WHBAR on deposit and unwrapped on withdrawal.
+
+## The two user roles
+
+### Bridgers
+
+A Bridger is any user who wants to move assets from one chain to another. You deposit tokens on the source chain using the **OrderPortal** contract. Once the deposit is confirmed and a ZK proof is generated, you receive the equivalent tokens on the destination chain — all without trusting an intermediary.
+
+### Makers
+
+A Maker is a liquidity provider. You post a **liquidity ad** on a chain using the **AdManager** contract, specifying how much liquidity you want to offer and at what rate. When a Bridger selects your ad and completes a deposit, the ZK proof system releases your destination-chain liquidity to the Bridger and sends the Bridger's source-chain tokens to your designated address.
+
+<Info>
+  You do not need to choose a role permanently. The same wallet can act as a Bridger on one trade and a Maker on another.
+</Info>
+
+## Where to go next
+
+<CardGroup cols={2}>
+  <Card title="Quickstart" icon="rocket" href="/quickstart">
+    Connect your wallet and make your first bridge transfer in a few steps.
+  </Card>
+  <Card title="How it works" icon="circle-info" href="/how-it-works">
+    See the full end-to-end flow, from liquidity ads to ZK-proof settlement.
+  </Card>
+</CardGroup>

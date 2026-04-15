@@ -1,0 +1,138 @@
+---
+title: "Chains API: Query Supported Blockchain Networks Info"
+description: "Query supported chains and their smart contract addresses. Use these endpoints to discover which networks ProofBridge is deployed on."
+---
+
+The Chains API lets you query the blockchain networks that ProofBridge supports. Each chain record includes the network's chain ID, its chain family (`EVM` or `STELLAR`), and the addresses of the deployed `AdManager` and `OrderPortal` smart contracts. Use these contract addresses when constructing transactions from the data returned by the Ads and Trades endpoints.
+
+These endpoints are public — no authentication required.
+
+<Note>
+  Chain and token registration is handled through an internal admin API and is not documented here. Contact the ProofBridge team to request support for a new network.
+</Note>
+
+---
+
+## GET /v1/chains
+
+List all supported chains. Supports optional filtering by name or chain ID, and cursor-based pagination.
+
+### Query parameters
+
+<ParamField query="name" type="string">
+  Filter by chain name. Partial matches are not guaranteed — use the exact name (e.g., `"Ethereum Mainnet"`).
+</ParamField>
+
+<ParamField query="chainId" type="string">
+  Filter by the numeric chain ID as a string (e.g., `"296"` for Hedera Testnet, `"11155111"` for Ethereum Sepolia).
+</ParamField>
+
+<ParamField query="cursor" type="string">
+  Pagination cursor from a previous response's `nextCursor` field.
+</ParamField>
+
+<ParamField query="limit" type="number" default="25">
+  Number of results per page. Between 1 and 100.
+</ParamField>
+
+### Response fields
+
+<ResponseField name="data" type="Chain[]" required>
+  Array of chain objects. See [Chain object fields](#chain-object-fields) below.
+</ResponseField>
+
+<ResponseField name="nextCursor" type="string | null" required>
+  Cursor for the next page. `null` when you have reached the last page.
+</ResponseField>
+
+<CodeGroup>
+
+```json Response
+{
+  "data": [
+    {
+      "name": "Hedera Testnet",
+      "chainId": "296",
+      "kind": "EVM",
+      "adManagerAddress": "0xA1B2C3D4E5F60718293A4B5C6D7E8F9012345678",
+      "orderPortalAddress": "0xB2C3D4E5F60718293A4B5C6D7E8F9012345678AB",
+      "createdAt": "2026-01-10T00:00:00.000Z",
+      "updatedAt": "2026-01-10T00:00:00.000Z"
+    },
+    {
+      "name": "Ethereum Sepolia",
+      "chainId": "11155111",
+      "kind": "EVM",
+      "adManagerAddress": "0xC3D4E5F60718293A4B5C6D7E8F9012345678ABC3",
+      "orderPortalAddress": "0xD4E5F60718293A4B5C6D7E8F9012345678ABCD4E",
+      "createdAt": "2026-01-10T00:00:00.000Z",
+      "updatedAt": "2026-01-10T00:00:00.000Z"
+    }
+  ],
+  "nextCursor": null
+}
+```
+
+</CodeGroup>
+
+---
+
+## GET /v1/chains/:chainId
+
+Retrieve details for a single chain by its numeric chain ID.
+
+### Path parameters
+
+<ParamField path="chainId" type="string" required>
+  The numeric chain ID of the network to retrieve (e.g., `"296"` or `"11155111"`). Do not use the internal UUID — use the public chain ID.
+</ParamField>
+
+Returns a single [Chain object](#chain-object-fields).
+
+<CodeGroup>
+
+```json Response
+{
+  "name": "Hedera Testnet",
+  "chainId": "296",
+  "kind": "EVM",
+  "adManagerAddress": "0xA1B2C3D4E5F60718293A4B5C6D7E8F9012345678",
+  "orderPortalAddress": "0xB2C3D4E5F60718293A4B5C6D7E8F9012345678AB",
+  "createdAt": "2026-01-10T00:00:00.000Z",
+  "updatedAt": "2026-01-10T00:00:00.000Z"
+}
+```
+
+</CodeGroup>
+
+---
+
+## Chain object fields
+
+<ResponseField name="name" type="string" required>
+  Human-readable name of the network (e.g., `"Hedera Testnet"`, `"Ethereum Sepolia"`).
+</ResponseField>
+
+<ResponseField name="chainId" type="string" required>
+  Numeric chain ID as a string. Use this value in the `adChainId` and `orderChainId` query parameters of other endpoints.
+</ResponseField>
+
+<ResponseField name="kind" type="string" required>
+  Chain family: `"EVM"` for Ethereum-compatible chains, or `"STELLAR"` for Stellar-based networks.
+</ResponseField>
+
+<ResponseField name="adManagerAddress" type="string" required>
+  Address of the `AdManager` smart contract deployed on this chain. Makers submit ad creation, funding, and closure transactions to this contract.
+</ResponseField>
+
+<ResponseField name="orderPortalAddress" type="string" required>
+  Address of the `OrderPortal` smart contract deployed on this chain. Bridgers submit deposit transactions to this contract.
+</ResponseField>
+
+<ResponseField name="createdAt" type="string" required>
+  ISO 8601 timestamp of when this chain was registered.
+</ResponseField>
+
+<ResponseField name="updatedAt" type="string" required>
+  ISO 8601 timestamp of the last update to this chain record.
+</ResponseField>

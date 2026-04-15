@@ -1,0 +1,139 @@
+---
+title: "Managing your ProofBridge liquidity ads as a Maker"
+description: "View, update, fund, withdraw from, and close your ProofBridge liquidity ads. Understand ad statuses and how to manage your capital as a Maker."
+---
+
+The **Ads Management** page gives you full control over the liquidity ads you have created as a Maker. You can add funds to an existing ad, withdraw unused liquidity, adjust parameters, or close an ad permanently. This guide covers each operation and explains what the different ad statuses mean.
+
+## View your ads
+
+Open [ProofBridge](https://proof-bridge.vercel.app), connect your wallet, and navigate to **Ads Management**. The page lists all ads associated with your wallet address, sorted by creation date. Each row shows:
+
+- **Ad ID**: The unique identifier for the ad.
+- **Route**: Source chain, destination chain, and token pair.
+- **Available balance**: Tokens available for new orders.
+- **Locked balance**: Tokens currently reserved for an in-progress order.
+- **Status**: The current lifecycle state of the ad.
+- **Created**: When the ad was created.
+
+Click an ad row to open its detail view, which shows the full history of orders matched against it.
+
+## Ad statuses
+
+| Status | Meaning |
+|---|---|
+| **Active** | The ad is funded and visible in the marketplace. Bridgers can select it. |
+| **Matched** | A Bridger has selected the ad and created an order. Settlement is in progress. |
+| **Locked** | A portion of the ad's balance is locked against an active order. |
+| **Settled** | An order against this ad has completed successfully. |
+| **Closed** | The ad has been permanently closed. No new orders can be matched. |
+
+An ad can hold multiple concurrent orders in the **Locked** state if it has sufficient available balance.
+
+## Update an ad
+
+You can adjust certain ad parameters (such as the ad recipient address) without closing and recreating the ad.
+
+<Steps>
+  <Step title="Open the ad detail page">
+    On the **Ads Management** page, click the ad you want to update.
+  </Step>
+
+  <Step title="Click Edit">
+    Click **Edit ad** to open the update form. Fields that can be changed appear as editable inputs.
+  </Step>
+
+  <Step title="Make your changes and save">
+    Adjust the parameters you want to update, then click **Save**. The frontend sends `PATCH /v1/ads/:id/update` to the relayer.
+
+    <Note>
+      Some parameters — such as the source chain, destination chain, and token pair — are set at creation and cannot be changed. Create a new ad if you need a different route.
+    </Note>
+  </Step>
+</Steps>
+
+## Fund an existing ad
+
+Add more tokens to an active ad to increase the liquidity available to Bridgers.
+
+<Steps>
+  <Step title="Open the ad detail page">
+    Navigate to **Ads Management** and click the ad you want to fund.
+  </Step>
+
+  <Step title="Click Fund">
+    Click **Fund ad** to open the funding dialog.
+  </Step>
+
+  <Step title="Enter the amount">
+    Enter the number of destination-chain tokens you want to add. Click **Fund**.
+  </Step>
+
+  <Step title="Confirm the transaction">
+    Your wallet prompts you to confirm a transaction to the AdManager contract. Review the amount and click **Confirm**. The frontend calls `POST /v1/ads/:id/fund`.
+
+    Once the transaction confirms, the ad's available balance increases immediately.
+  </Step>
+</Steps>
+
+## Withdraw unused funds
+
+Withdraw tokens from your ad that are not currently locked in an active order.
+
+<Steps>
+  <Step title="Open the ad detail page">
+    Navigate to **Ads Management** and click the ad from which you want to withdraw.
+  </Step>
+
+  <Step title="Click Withdraw">
+    Click **Withdraw**. The withdrawal form shows your current available balance (unlocked tokens only).
+  </Step>
+
+  <Step title="Enter the withdrawal amount">
+    Enter the amount to withdraw. You can only withdraw up to the **available** (unlocked) balance. Locked tokens cannot be withdrawn while an order is in progress.
+  </Step>
+
+  <Step title="Confirm the transaction">
+    Click **Withdraw**, then confirm the transaction in your wallet. The frontend calls `POST /v1/ads/:id/withdraw`. Once the transaction is confirmed on-chain, the tokens are returned to your wallet.
+
+    <Warning>
+      You cannot withdraw tokens that are currently locked for an active order. Wait for the order to settle before withdrawing those funds.
+    </Warning>
+  </Step>
+
+  <Step title="Confirm the chain action">
+    After the on-chain transaction confirms, the app notifies the relayer via the chain action confirmation step (`POST /v1/ads/:id/confirm`) to update the ad's recorded balance.
+  </Step>
+</Steps>
+
+## Close an ad
+
+Closing an ad permanently removes it from the marketplace and withdraws all remaining unlocked funds to your wallet. This action cannot be undone.
+
+<Steps>
+  <Step title="Open the ad detail page">
+    Navigate to **Ads Management** and click the ad you want to close.
+  </Step>
+
+  <Step title="Click Close ad">
+    Click **Close ad**. A confirmation dialog appears, warning that the action is permanent.
+
+    <Warning>
+      Closing an ad is irreversible. Any tokens locked in active orders at the time of closing are released once those orders settle, but no new orders will be matched to the ad.
+    </Warning>
+  </Step>
+
+  <Step title="Confirm the close action">
+    Click **Confirm close**. Your wallet prompts you to approve a transaction to the AdManager contract. Confirm the transaction.
+
+    The frontend calls `POST /v1/ads/:id/close`. The AdManager marks the ad as closed and initiates withdrawal of the full available balance to your wallet.
+  </Step>
+
+  <Step title="Verify the withdrawal">
+    After the transaction confirms, the ad status changes to **Closed** and your available balance returns to zero. Check your destination-chain wallet to confirm the tokens arrived.
+  </Step>
+</Steps>
+
+<Tip>
+  If you want to pause an ad temporarily without closing it, withdraw all available funds instead. The ad remains open but will not be matched to new orders while its balance is zero.
+</Tip>

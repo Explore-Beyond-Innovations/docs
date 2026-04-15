@@ -1,0 +1,93 @@
+---
+title: "API Reference: ProofBridge Relayer REST API Overview"
+description: "Complete reference for the ProofBridge Relayer REST API. All endpoints are versioned under /v1/, require JSON bodies, and return JSON responses."
+---
+
+The ProofBridge Relayer API is the backend service that orchestrates cross-chain trading operations. You interact with it to manage liquidity advertisements, initiate and settle trades, and query supported chains and routes. Every endpoint is versioned under `/v1/`, and most mutating operations require a `Bearer` token obtained through the authentication flow.
+
+## Base URL
+
+```
+https://api.proof-bridge.vercel.app
+```
+
+All endpoints are prefixed with `/v1/`. For example, to list ads you call `GET https://api.proof-bridge.vercel.app/v1/ads`.
+
+<Note>
+  The live API base URL is served by the ProofBridge backend. If you are running a local development instance, replace the base URL with your local address (e.g., `http://localhost:3000`).
+</Note>
+
+## Authentication
+
+Most write endpoints require an `Authorization` header:
+
+```
+Authorization: Bearer <accessToken>
+```
+
+You obtain `accessToken` by completing the SIWE (Sign-In With Ethereum) or SEP-10 (Stellar) challenge flow. See the [Authentication](/api/authentication) page for the full walkthrough.
+
+## Response format
+
+All responses are JSON. Successful responses return an HTTP `2xx` status code with a JSON body. Paginated list endpoints return a `data` array and a `nextCursor` field.
+
+```json
+{
+  "data": [...],
+  "nextCursor": "eyJpZCI6IjEyMyJ9"
+}
+```
+
+Pass `nextCursor` back as the `cursor` query parameter to fetch the next page. When `nextCursor` is `null`, you have reached the last page.
+
+## Rate limiting
+
+Standard rate limiting applies to all endpoints. If you exceed the limit, the API returns `429 Too Many Requests`. Implement exponential backoff when retrying.
+
+## Utility endpoints
+
+| Method | Path      | Description                                |
+|--------|-----------|--------------------------------------------|
+| `GET`  | `/health` | Returns service health status.             |
+| `GET`  | `/docs`   | Opens the Swagger UI for interactive docs. |
+
+## Endpoint groups
+
+<CardGroup cols={2}>
+  <Card title="Authentication" icon="key" href="/api/authentication">
+    Obtain and refresh access tokens using wallet-based SIWE or SEP-10 challenges.
+  </Card>
+  <Card title="Ads" icon="rectangle-ad" href="/api/ads">
+    Create and manage liquidity advertisements, fund pools, and handle the ad lifecycle.
+  </Card>
+  <Card title="Trades" icon="arrow-right-arrow-left" href="/api/trades">
+    Initiate trades, retrieve order parameters, lock and unlock funds across chains.
+  </Card>
+  <Card title="Routes" icon="route" href="/api/routes">
+    Query supported cross-chain token pair routes.
+  </Card>
+  <Card title="Chains" icon="link" href="/api/chains">
+    Retrieve supported blockchain networks and their contract addresses.
+  </Card>
+</CardGroup>
+
+## Error codes
+
+| Code  | Meaning                                                                 |
+|-------|-------------------------------------------------------------------------|
+| `400` | Bad request — malformed syntax or invalid parameter combination.        |
+| `401` | Unauthorized — missing or expired `Authorization` token.                |
+| `403` | Forbidden — you do not have permission to perform this action.          |
+| `404` | Not found — the requested resource does not exist.                      |
+| `422` | Validation error — request body or query params failed validation.      |
+| `500` | Internal server error — something went wrong on the server.             |
+
+Error responses include a `message` field describing the problem:
+
+```json
+{
+  "statusCode": 422,
+  "message": ["routeId must be a UUID"],
+  "error": "Unprocessable Entity"
+}
+```

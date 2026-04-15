@@ -1,0 +1,286 @@
+---
+title: "Authentication: Wallet-Based Sign-In for API Access"
+description: "Authenticate with ProofBridge using SIWE (EVM wallets) or SEP-10 (Stellar wallets). Exchange a signed challenge for JWT access and refresh tokens."
+---
+
+ProofBridge uses wallet-based authentication — no usernames or passwords. For EVM wallets, this follows the [Sign-In With Ethereum (SIWE)](https://eips.ethereum.org/EIPS/eip-4361) standard. For Stellar wallets, it follows the [SEP-10](https://github.com/stellar/stellar-protocol/blob/master/ecosystem/sep-0010.md) challenge-response protocol. Both flows produce the same result: a short-lived `access` token and a long-lived `refresh` token you can use to authenticate subsequent requests.
+
+<Note>
+  All three authentication endpoints are unauthenticated — do not include an `Authorization` header when calling them.
+</Note>
+
+## Authentication flow
+
+<Steps>
+  <Step title="Request a challenge">
+    Call `POST /v1/auth/challenge` with your wallet address and chain kind. The server returns a signed challenge (a SIWE message for EVM or a base64-encoded transaction for Stellar) that you must sign with your wallet's private key.
+  </Step>
+  <Step title="Sign the challenge">
+    Sign the challenge message locally using your wallet. For EVM, use `eth_signMessage` or equivalent. For Stellar, co-sign the returned XDR transaction.
+  </Step>
+  <Step title="Submit the signed message">
+    Call `POST /v1/auth/login` with your address, chain kind, and the signature (EVM) or co-signed transaction (Stellar). The server verifies the signature and returns `access` and `refresh` tokens.
+  </Step>
+  <Step title="Use the access token">
+    Include `Authorization: Bearer <access>` in the headers of every authenticated request.
+  </Step>
+  <Step title="Refresh when expired">
+    When the access token expires, call `POST /v1/auth/refresh` with your refresh token to obtain a new access token without re-signing.
+  </Step>
+</Steps>
+
+---
+
+## POST /v1/auth/challenge
+
+Request a nonce challenge for your wallet address. The returned value is the message (EVM) or transaction (Stellar) that you must sign.
+
+### Request body
+
+<ParamField body="address" type="string" required>
+  Your wallet address. Use `0x`-prefixed 20-byte hex for EVM (e.g., `0x742d35Cc6634C0532925a3b844Bc454e4438f44e`), or a G-strkey for Stellar (e.g., `GAHJJJKMOKYE4RVPZEWZTKH5FVI4PA3VL7GK2LFNUBSGBV`).
+</ParamField>
+
+<ParamField body="chainKind" type="string" required>
+  The chain family the wallet belongs to. Must be `"EVM"` or `"STELLAR"`.
+</ParamField>
+
+### Response fields
+
+<ResponseField name="chainKind" type="string" required>
+  Echoed chain kind: `"EVM"` or `"STELLAR"`.
+</ResponseField>
+
+<ResponseField name="address" type="string" required>
+  Echoed wallet address in canonical form.
+</ResponseField>
+
+<ResponseField name="expiresAt" type="string" required>
+  ISO 8601 timestamp after which the challenge is no longer valid.
+</ResponseField>
+
+<ResponseField name="nonce" type="string">
+  Unique nonce embedded in the SIWE message. Returned for EVM challenges only.
+</ResponseField>
+
+<ResponseField name="domain" type="string">
+  SIWE domain. Returned for EVM challenges only.
+</ResponseField>
+
+<ResponseField name="uri" type="string">
+  SIWE URI. Returned for EVM challenges only.
+</ResponseField>
+
+<ResponseField name="transaction" type="string">
+  Server-signed SEP-10 challenge transaction in base64 XDR format. Returned for Stellar challenges only.
+</ResponseField>
+
+<ResponseField name="networkPassphrase" type="string">
+  Stellar network passphrase. Returned for Stellar challenges only.
+</ResponseField>
+
+<CodeGroup>
+
+```json Request
+{
+  "address": "0x742d35Cc6634C0532925a3b844Bc454e4438f44e",
+  "chainKind": "EVM"
+}
+```
+
+```json Response
+{
+  "chainKind": "EVM",
+  "address": "0x742d35Cc6634C0532925a3b844Bc454e4438f44e",
+  "expiresAt": "2026-04-15T12:05:00.000Z",
+  "nonce": "a3f9b2c1d4e5f607",
+  "domain": "proof-bridge.vercel.app",
+  "uri": "https://proof-bridge.vercel.app"
+}
+```
+
+</CodeGroup>
+
+---
+
+## POST /v1/auth/login
+
+Submit your signed challenge to receive JWT tokens. The request body differs slightly depending on `chainKind`.
+
+### Request body
+
+<ParamField body="chainKind" type="string" required>
+  Must match the `chainKind` used when requesting the challenge: `"EVM"` or `"STELLAR"`.
+</ParamField>
+
+<ParamField body="message" type="string">
+  The SIWE message string returned from the challenge step. Required when `chainKind` is `"EVM"`.
+</ParamField>
+
+<ParamField body="signature" type="string">
+  Your wallet's signature over the SIWE message. Required when `chainKind` is `"EVM"`.
+</ParamField>
+
+<ParamField body="transaction" type="string">
+  The co-signed SEP-10 challenge transaction in base64 XDR format. Required when `chainKind` is `"STELLAR"`.
+</ParamField>
+
+### Response fields
+
+<ResponseField name="user" type="object" required>
+  <Expandable title="properties">
+    <ResponseField name="id" type="string" required>
+      Unique identifier for the authenticated user.
+    </ResponseField>
+    <ResponseField name="username" type="string" required>
+      Derived username associated with the wallet.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="tokens" type="object" required>
+  <Expandable title="properties">
+    <ResponseField name="access" type="string" required>
+      Short-lived JWT. Pass this in the `Authorization: Bearer` header.
+    </ResponseField>
+    <ResponseField name="refresh" type="string" required>
+      Long-lived token used to obtain a new access token without re-signing.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<CodeGroup>
+
+```json Request (EVM)
+{
+  "chainKind": "EVM",
+  "message": "proof-bridge.vercel.app wants you to sign in with your Ethereum account:\n0x742d35Cc6634C0532925a3b844Bc454e4438f44e\n\nSign in to ProofBridge\n\nURI: https://proof-bridge.vercel.app\nVersion: 1\nChain ID: 1\nNonce: a3f9b2c1d4e5f607\nIssued At: 2026-04-15T12:00:00.000Z",
+  "signature": "0x4d2a1c3e5f6b7a8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d01"
+}
+```
+
+```json Response
+{
+  "user": {
+    "id": "550e8400-e29b-41d4-a716-446655440000",
+    "username": "0x742d...f44e"
+  },
+  "tokens": {
+    "access": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI1NTBlODQwMC1lMjliLTQxZDQtYTcxNi00NDY2NTU0NDAwMDAiLCJpYXQiOjE3MTMxNzYwMDB9.sig",
+    "refresh": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI1NTBlODQwMC1lMjliLTQxZDQtYTcxNi00NDY2NTU0NDAwMDAiLCJ0eXBlIjoicmVmcmVzaCJ9.sig"
+  }
+}
+```
+
+</CodeGroup>
+
+---
+
+## POST /v1/auth/refresh
+
+Exchange a valid refresh token for a new access token. Use this when your access token expires to avoid forcing the user to re-sign.
+
+### Request body
+
+<ParamField body="refresh" type="string" required>
+  The refresh token returned from the login response.
+</ParamField>
+
+### Response fields
+
+<ResponseField name="tokens" type="object" required>
+  <Expandable title="properties">
+    <ResponseField name="access" type="string" required>
+      New short-lived JWT access token.
+    </ResponseField>
+    <ResponseField name="refresh" type="string" required>
+      New refresh token. Replace the one stored in your application.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<CodeGroup>
+
+```json Request
+{
+  "refresh": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI1NTBlODQwMC1lMjliLTQxZDQtYTcxNi00NDY2NTU0NDAwMDAiLCJ0eXBlIjoicmVmcmVzaCJ9.sig"
+}
+```
+
+```json Response
+{
+  "tokens": {
+    "access": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI1NTBlODQwMC1lMjliLTQxZDQtYTcxNi00NDY2NTU0NDAwMDAiLCJpYXQiOjE3MTMxNzYzMDB9.sig",
+    "refresh": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI1NTBlODQwMC1lMjliLTQxZDQtYTcxNi00NDY2NTU0NDAwMDAiLCJ0eXBlIjoicmVmcmVzaCJ9.new"
+  }
+}
+```
+
+</CodeGroup>
+
+---
+
+## JavaScript example: full authentication flow
+
+The following example shows the complete EVM authentication flow using `ethers.js` and the Fetch API.
+
+```javascript
+import { ethers } from "ethers";
+
+async function authenticate(walletAddress) {
+  const BASE_URL = "https://api.proof-bridge.vercel.app";
+
+  // Step 1: Request a challenge
+  const challengeRes = await fetch(`${BASE_URL}/v1/auth/challenge`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ address: walletAddress, chainKind: "EVM" }),
+  });
+  const { message: siweMessage } = await challengeRes.json();
+
+  // Step 2: Sign the challenge with the connected wallet
+  const provider = new ethers.BrowserProvider(window.ethereum);
+  const signer = await provider.getSigner();
+  const signature = await signer.signMessage(siweMessage);
+
+  // Step 3: Submit the signed message
+  const loginRes = await fetch(`${BASE_URL}/v1/auth/login`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      chainKind: "EVM",
+      message: siweMessage,
+      signature,
+    }),
+  });
+  const { tokens } = await loginRes.json();
+
+  // Step 4: Store tokens and use the access token in future requests
+  localStorage.setItem("pb_access", tokens.access);
+  localStorage.setItem("pb_refresh", tokens.refresh);
+
+  return tokens.access;
+}
+
+// Step 5: Refresh when the access token expires
+async function refreshTokens() {
+  const BASE_URL = "https://api.proof-bridge.vercel.app";
+  const refresh = localStorage.getItem("pb_refresh");
+
+  const res = await fetch(`${BASE_URL}/v1/auth/refresh`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ refresh }),
+  });
+  const { tokens } = await res.json();
+
+  localStorage.setItem("pb_access", tokens.access);
+  localStorage.setItem("pb_refresh", tokens.refresh);
+
+  return tokens.access;
+}
+```
+
+<Warning>
+  Store tokens securely. Do not persist access tokens in `localStorage` in production environments — use `httpOnly` cookies or an in-memory store to reduce XSS exposure.
+</Warning>

@@ -1,0 +1,50 @@
+---
+title: "ProofBridge: Trustless Cross-Chain Asset Transfers"
+description: "ProofBridge enables peer-to-peer cross-chain asset transfers using zero-knowledge proofs. No centralized relayers, no custodians — just cryptographic trust."
+---
+
+ProofBridge is a decentralized cross-chain bridge that lets you transfer assets between blockchain networks without trusting any third party. Instead of routing funds through a centralized custodian or validator committee, ProofBridge uses zero-knowledge proofs and direct peer-to-peer matching between liquidity providers (Makers) and bridge users (Bridgers).
+
+<CardGroup cols={2}>
+  <Card title="Quick Start" icon="rocket" href="/quickstart">
+    Connect your wallet and make your first cross-chain transfer in minutes.
+  </Card>
+  <Card title="How It Works" icon="circle-info" href="/how-it-works">
+    Understand the peer-to-peer bridging model and the role of ZK proofs.
+  </Card>
+  <Card title="Bridge Tokens" icon="bridge" href="/guides/bridge-tokens">
+    Step-by-step guide to bridging tokens across supported networks.
+  </Card>
+  <Card title="Provide Liquidity" icon="droplet" href="/guides/provide-liquidity">
+    Become a Maker and earn fees by providing cross-chain liquidity.
+  </Card>
+  <Card title="API Reference" icon="code" href="/api/overview">
+    Integrate ProofBridge into your application using the REST API.
+  </Card>
+  <Card title="Supported Networks" icon="network-wired" href="/concepts/supported-networks">
+    View all supported chains and available cross-chain routes.
+  </Card>
+</CardGroup>
+
+## How ProofBridge works
+
+ProofBridge matches Bridgers (users who want to transfer assets) with Makers (liquidity providers) through a marketplace of liquidity advertisements. Settlement is secured by zero-knowledge proofs — neither party needs to trust the other or any intermediary.
+
+<Steps>
+  <Step title="Maker posts liquidity">
+    A Maker creates a liquidity ad on their source chain, locking tokens they want to provide for cross-chain transfers.
+  </Step>
+  <Step title="Bridger deposits funds">
+    A Bridger selects an ad and deposits the source-chain token on the OrderPortal contract. This creates a cryptographically signed order.
+  </Step>
+  <Step title="ZK proof is generated">
+    The relayer generates a zero-knowledge proof attesting that the deposit exists in the on-chain Merkle tree, without revealing private data.
+  </Step>
+  <Step title="Both parties receive funds">
+    The ZK proof is submitted to both chains simultaneously, releasing the Bridger's destination tokens and the Maker's source tokens trustlessly.
+  </Step>
+</Steps>
+
+<Note>
+  ProofBridge is currently live on **Ethereum Sepolia** and **Hedera Testnet** with Stellar support. Mainnet deployments are on the roadmap.
+</Note>

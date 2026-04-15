@@ -1,0 +1,142 @@
+---
+title: "ProofBridge smart contract reference and addresses"
+description: "Explore the four ProofBridge contracts, their key functions, deployed addresses on Ethereum Sepolia and Hedera Testnet, and the EIP-712 order structure."
+---
+
+ProofBridge settles cross-chain transfers entirely on-chain through four contracts deployed on each supported network. Two of these — AdManager and OrderPortal — are the contracts you interact with directly. The other two — MerkleManager and Verifier — operate in the background to record order history and validate zero-knowledge proofs.
+
+## Contracts at a glance
+
+<CardGroup cols={2}>
+  <Card title="AdManager" icon="store">
+    Where Makers create and manage liquidity ads, lock funds against orders, and receive settlement after a successful transfer.
+  </Card>
+  <Card title="OrderPortal" icon="arrow-right-arrow-left">
+    Where Bridgers initiate cross-chain transfers by depositing source-chain tokens and creating a signed order.
+  </Card>
+  <Card title="MerkleManager" icon="tree">
+    An append-only Merkle Mountain Range that permanently records every order hash. You never call this contract directly.
+  </Card>
+  <Card title="Verifier" icon="shield-check">
+    Validates zero-knowledge proofs on-chain using the UltraHonk proving system. You never call this contract directly.
+  </Card>
+</CardGroup>
+
+---
+
+## AdManager
+
+AdManager is deployed on the **destination chain** — the chain where the Maker's liquidity lives and where the Bridger's funds will be released. As a Maker, all your day-to-day activity happens here.
+
+### What you can do
+
+| Function | Description |
+|---|---|
+| `createAd` | Post a new liquidity advertisement with a specific token and amount. |
+| `fundAd` | Deposit additional tokens into an existing ad to increase available liquidity. |
+| `withdrawFromAd` | Withdraw unused tokens from an open ad. |
+| `closeAd` | Permanently close an ad and recover all remaining funds. |
+| `lockForOrder` | Reserve liquidity against a specific EIP-712 order hash. This appends the order to the chain's Merkle tree. |
+| `unlock` | Submit a ZK proof to complete settlement. Releases the locked ad token to the Bridger's designated recipient. |
+
+<Note>
+  Only the relayer calls `unlock` on your behalf after a valid ZK proof is generated. You do not need to call it manually.
+</Note>
+
+---
+
+## OrderPortal
+
+OrderPortal is deployed on the **source chain** — the chain where a Bridger deposits the tokens they want to transfer. Bridgers interact with this contract when they create an order.
+
+### What you can do
+
+| Function | Description |
+|---|---|
+| `createOrder` | Deposit source-chain tokens and open a cross-chain order. The order hash is appended to the chain's Merkle tree. |
+| `unlock` | Submit a ZK proof to release the deposited tokens to the Maker's designated recipient on this chain. |
+
+<Note>
+  As with AdManager, the relayer calls `unlock` on your behalf. After you create an order, the protocol handles the rest automatically.
+</Note>
+
+---
+
+## MerkleManager
+
+MerkleManager maintains a Poseidon2-based Merkle Mountain Range (MMR) — an append-only ledger of every order hash ever created on the chain. It is a foundational piece of the security model: a proof of deposit on Chain A must include a valid Merkle inclusion proof against Chain A's MMR root.
+
+You do not call MerkleManager directly. AdManager and OrderPortal hold the `MANAGER_ROLE` permission to append hashes after each deposit or lock.
+
+---
+
+## Verifier
+
+Verifier stores the verification key on-chain and validates the UltraHonk zero-knowledge proofs submitted during settlement. It uses the BN254 elliptic curve and a keccak-based Fiat-Shamir transform for efficient on-chain verification.
+
+You do not call Verifier directly. AdManager and OrderPortal call it internally during each `unlock`.
+
+---
+
+## Deployed addresses
+
+<Tabs>
+  <Tab title="Ethereum Sepolia">
+    **Chain ID: 11155111**
+
+    | Contract | Address | Explorer |
+    |---|---|---|
+    | Verifier | `0xDc930A3b5CC073092750aE7f4FF45409B2428592` | [View on Etherscan](https://sepolia.etherscan.io/address/0xDc930A3b5CC073092750aE7f4FF45409B2428592) |
+    | MerkleManager | `0x397E7356aF447B2754D8Ea0838d285FB78F2482d` | [View on Etherscan](https://sepolia.etherscan.io/address/0x397E7356aF447B2754D8Ea0838d285FB78F2482d) |
+    | wNativeToken (WETH) | `0xf635e2661c950c7947a13d03e16076F7b5aA5DbE` | [View on Etherscan](https://sepolia.etherscan.io/address/0xf635e2661c950c7947a13d03e16076F7b5aA5DbE) |
+    | AdManager | `0x366D90CB2A8606A82164C717cF1889c3ed5aE1f4` | [View on Etherscan](https://sepolia.etherscan.io/address/0x366D90CB2A8606A82164C717cF1889c3ed5aE1f4) |
+    | OrderPortal | `0xF1C313faAD40ccAeDb4Fd3e7C838993569E2572C` | [View on Etherscan](https://sepolia.etherscan.io/address/0xF1C313faAD40ccAeDb4Fd3e7C838993569E2572C) |
+    | ProofBridge Token | `0x1B62aDdB315CC98ab4625ffA170c1BC5C75F9da7` | [View on Etherscan](https://sepolia.etherscan.io/address/0x1B62aDdB315CC98ab4625ffA170c1BC5C75F9da7) |
+  </Tab>
+  <Tab title="Hedera Testnet">
+    **Chain ID: 296**
+
+    | Contract | Address | Explorer |
+    |---|---|---|
+    | Verifier | `0xDbf6dA1aBD40f7b7eA7B935663D4F78325930e48` | [View on HashScan](https://hashscan.io/testnet/contract/0xDbf6dA1aBD40f7b7eA7B935663D4F78325930e48) |
+    | MerkleManager | `0x04cD7aCc919F2916Ae0eAEa7BFc40962BC99AC8E` | [View on HashScan](https://hashscan.io/testnet/contract/0x04cD7aCc919F2916Ae0eAEa7BFc40962BC99AC8E) |
+    | wNativeToken (WHBAR) | `0xb1f616b8134f602c3bb465fb5b5e6565ccad37ed` | [View on HashScan](https://hashscan.io/testnet/contract/0xb1f616b8134f602c3bb465fb5b5e6565ccad37ed) |
+    | AdManager | `0x9AeF534c50D4BAA10c2cBA14590a37798Ea4c768` | [View on HashScan](https://hashscan.io/testnet/contract/0x9AeF534c50D4BAA10c2cBA14590a37798Ea4c768) |
+    | OrderPortal | `0x4C5dDf1CC71a709704d26648f71bD3E629BE5914` | [View on HashScan](https://hashscan.io/testnet/contract/0x4C5dDf1CC71a709704d26648f71bD3E629BE5914) |
+    | ProofBridge Token | `0x9318E8f8C1F7Bff8c00A062F80b391866fBE8d87` | [View on HashScan](https://hashscan.io/testnet/contract/0x9318E8f8C1F7Bff8c00A062F80b391866fBE8d87) |
+  </Tab>
+</Tabs>
+
+---
+
+## The Order struct (EIP-712)
+
+Every cross-chain transfer is represented as a typed EIP-712 struct. Signing this struct cryptographically binds your order to the specific chains and contracts involved — it cannot be replayed on a different chain or with a different contract.
+
+The domain separator uses:
+- **Name**: `Proofbridge`
+- **Version**: `1`
+
+The chain ID and contract addresses are explicit fields in the struct itself, rather than in the domain, ensuring every field is visible and auditable.
+
+```text
+Order {
+  orderChainToken     // token you are depositing (source chain)
+  adChainToken        // token you will receive (destination chain)
+  amount              // transfer amount
+  bridger             // your address as the Bridger
+  orderChainId        // source chain ID
+  orderPortal         // OrderPortal contract address on the source chain
+  orderRecipient      // address to receive funds on the source chain (Maker's payout)
+  adChainId           // destination chain ID
+  adManager           // AdManager contract address on the destination chain
+  adId                // identifier of the Maker's liquidity ad
+  adCreator           // Maker's address
+  adRecipient         // address to receive funds on the destination chain (your payout)
+  salt                // caller-controlled nonce to prevent duplicate orders
+}
+```
+
+<Warning>
+  Never reuse a `salt` value. Each order must have a unique salt to produce a distinct order hash. Reusing a salt with the same parameters will cause the transaction to revert.
+</Warning>

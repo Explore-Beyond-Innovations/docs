@@ -1,0 +1,146 @@
+---
+title: "Quickstart: complete your first ProofBridge transfer"
+description: "Connect your wallet and complete your first cross-chain transfer on ProofBridge in minutes. This guide walks you through the Bridger flow step by step."
+---
+
+This guide walks you through making your first cross-chain transfer on ProofBridge as a Bridger. You will deposit tokens on one chain and receive tokens on another — the whole process takes a few minutes once your wallet is set up.
+
+## Prerequisites
+
+Before you start, make sure you have:
+
+- **A compatible wallet.** MetaMask (or any EIP-1193-compatible browser extension) for EVM chains, or a Stellar wallet for Stellar Testnet.
+- **Testnet funds.** You need either Sepolia ETH or Hedera Testnet HBAR to cover the deposit and gas. Get Sepolia ETH from a public faucet, or Hedera Testnet HBAR from the [Hedera Developer Portal](https://portal.hedera.com/).
+- **A modern browser.** The ProofBridge web app works in any browser that supports wallet extensions.
+
+<Note>
+  ProofBridge is live on testnets only. Do not send mainnet funds. Use Sepolia ETH or Hedera Testnet HBAR.
+</Note>
+
+## Step-by-step: your first transfer
+
+<Steps>
+  <Step title="Open the ProofBridge app">
+    Navigate to [https://proof-bridge.vercel.app/](https://proof-bridge.vercel.app/) in your browser.
+
+    You will see the bridge marketplace showing available liquidity ads from Makers. Each ad lists the route, available amount, and exchange rate.
+  </Step>
+  <Step title="Connect your wallet">
+    Click **Connect Wallet** in the top right corner.
+
+    <Tabs>
+      <Tab title="EVM wallet (MetaMask)">
+        Select MetaMask or your preferred EVM wallet from the list. Your wallet will prompt you to approve the connection.
+
+        Once connected, you will be asked to sign a **Sign-In With Ethereum (SIWE)** message. This authenticates your session — it is a signature only, not a transaction, so it costs no gas.
+
+        Make sure your wallet is set to **Ethereum Sepolia** (chain ID 11155111) or **Hedera Testnet** (chain ID 296).
+      </Tab>
+      <Tab title="Stellar wallet">
+        Select your Stellar wallet from the connection options. You will be prompted to sign an authentication message to verify ownership of your address.
+
+        Make sure your wallet is connected to **Stellar Testnet**.
+      </Tab>
+    </Tabs>
+
+    After signing, your wallet address appears in the header and your session is active.
+  </Step>
+  <Step title="Select a liquidity ad">
+    Browse the marketplace for an ad that matches the route you want. For example, to move ETH from Sepolia to Hedera, look for an ad offering **ETH → wETH** (Sepolia to Hedera).
+
+    Each ad card shows:
+    - The source and destination chain
+    - The token pair
+    - The available liquidity amount
+    - The exchange rate
+
+    Click an ad to see its full details, then click **Bridge** to start the transfer.
+  </Step>
+  <Step title="Enter your transfer details">
+    On the order form, fill in:
+
+    - **Amount** — how much you want to bridge (must be within the ad's available liquidity).
+    - **Recipient address** — the address on the destination chain where you want to receive tokens. This defaults to your connected wallet address, but you can specify a different address.
+
+    Review the summary showing the amount you will deposit and the amount you will receive.
+
+    <Warning>
+      Double-check your recipient address on the destination chain before confirming. Funds sent to a wrong address cannot be recovered.
+    </Warning>
+  </Step>
+  <Step title="Approve and deposit">
+    Click **Confirm** to submit the order.
+
+    Your wallet will prompt you to sign or approve one or two transactions:
+
+    1. **Token approval** (if required) — grants the OrderPortal contract permission to transfer your tokens. This is a standard ERC-20 approval and only appears for ERC-20 tokens, not native ETH or HBAR.
+    2. **Create order** — deposits your tokens into the OrderPortal contract and records the order on-chain.
+
+    Confirm both prompts in your wallet. Wait for the deposit transaction to be confirmed on the source chain — this usually takes a few seconds to a minute depending on network congestion.
+  </Step>
+  <Step title="Wait for ZK proof generation">
+    Once your deposit is confirmed, the relayer automatically:
+
+    1. Detects your on-chain deposit.
+    2. Notifies the Maker, who locks their liquidity for your order.
+    3. Generates a zero-knowledge proof confirming your deposit is included in the source chain's Merkle tree.
+    4. Submits the proof to both chains for verification and settlement.
+
+    You can track the status of your order on the **Orders** page. The status moves through: `Order created` → `Locked` → `Proof submitted` → `Completed`.
+  </Step>
+  <Step title="Receive your tokens">
+    Once the proof is verified on both chains, the destination-chain tokens are released to your recipient address automatically.
+
+    You will see the **Completed** status on your order and can verify the receipt by checking your wallet balance or the destination chain's block explorer.
+
+    <Tip>
+      For Hedera, use [HashScan](https://hashscan.io/testnet) to verify your transaction. For Sepolia, use [Etherscan](https://sepolia.etherscan.io/).
+    </Tip>
+  </Step>
+</Steps>
+
+## What to expect at each stage
+
+| Status | What is happening |
+|---|---|
+| Order created | Your deposit is confirmed on-chain and the order hash is recorded in the Merkle tree. |
+| Locked | The Maker has locked their destination-chain liquidity for your order. |
+| Proof submitted | The ZK proof has been submitted to both chains for verification. |
+| Completed | Both chains have verified the proof and funds have been released to both parties. |
+
+## Common questions
+
+<AccordionGroup>
+  <Accordion title="How long does a transfer take?">
+    Most transfers complete within a few minutes. The main variable is block confirmation time on the source chain. Sepolia confirmations typically take under a minute; Hedera is faster. Proof generation adds a small amount of additional time.
+  </Accordion>
+  <Accordion title="What if no liquidity ad matches my route?">
+    If there are no ads for your desired route or the available amounts are too small, you can check back later as Makers add new ads over time. You can also become a Maker yourself and post liquidity on the route you need.
+  </Accordion>
+  <Accordion title="Can I specify a different recipient address?">
+    Yes. On the order form, you can enter any valid address on the destination chain as your recipient. This lets you bridge directly to a different wallet or a smart contract address.
+  </Accordion>
+  <Accordion title="What happens if the Maker does not lock liquidity?">
+    If the Maker does not lock their liquidity within the expected window, the relayer flags the order. Your deposited funds remain in the OrderPortal contract and are not at risk. Contact support via the GitHub repository if your order stays stuck.
+  </Accordion>
+  <Accordion title="Do I need to do anything after depositing?">
+    No. Once you confirm the deposit transaction, the relayer handles proof generation and submission automatically. You just wait for the Completed status.
+  </Accordion>
+</AccordionGroup>
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Bridge tokens guide" icon="arrow-right-arrow-left" href="/guides/bridge-tokens">
+    A deeper walkthrough of the Bridger flow including tips for larger transfers.
+  </Card>
+  <Card title="Provide liquidity" icon="droplet" href="/guides/provide-liquidity">
+    Learn how to post a liquidity ad and earn fees as a Maker.
+  </Card>
+  <Card title="How it works" icon="circle-info" href="/how-it-works">
+    Understand the ZK proof system and settlement mechanics in detail.
+  </Card>
+  <Card title="Supported networks" icon="network-wired" href="/concepts/supported-networks">
+    View all available chains and token routes.
+  </Card>
+</CardGroup>

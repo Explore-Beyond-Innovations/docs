@@ -1,0 +1,84 @@
+---
+title: "Makers and Bridgers: understanding ProofBridge roles"
+description: "ProofBridge has two roles: Makers who provide cross-chain liquidity and Bridgers who transfer assets. Learn how each role works and how they interact."
+---
+
+Every cross-chain transfer on ProofBridge involves two parties: a **Maker** who provides liquidity on the destination chain, and a **Bridger** who wants to move assets from one chain to another. Neither party needs to trust the other — settlement is enforced by zero-knowledge proofs on-chain.
+
+## The two roles
+
+<CardGroup cols={2}>
+  <Card title="Maker" icon="droplet">
+    A liquidity provider who locks tokens on the destination chain and earns the Bridger's source tokens when the trade settles. Makers post liquidity ads to the marketplace to attract Bridgers.
+  </Card>
+  <Card title="Bridger" icon="bridge">
+    A user who wants to transfer assets across chains. Bridgers deposit source tokens, select a matching liquidity ad, and receive destination tokens from the Maker's locked liquidity.
+  </Card>
+</CardGroup>
+
+## How Makers work
+
+As a Maker, you provide liquidity for a specific cross-chain route — for example, wETH on Hedera in exchange for ETH on Sepolia. You post a **liquidity ad** specifying the token pair, available amount, and exchange rate. When a Bridger selects your ad, your funds are locked against that specific order and released to the Bridger upon settlement.
+
+In return, you receive the Bridger's deposited source tokens. This means you earn by facilitating cross-chain transfers rather than by charging fees out of band.
+
+<Steps>
+  <Step title="Create a liquidity ad">
+    Connect your wallet and post an ad on the [ProofBridge app](https://proof-bridge.vercel.app/) specifying the source token, destination token, amount, and rate you're willing to accept.
+  </Step>
+  <Step title="Fund the ad">
+    Deposit destination-chain tokens into the `AdManager` contract. These tokens are held on-chain and matched against incoming Bridger orders.
+  </Step>
+  <Step title="Lock for an order">
+    When a Bridger selects your ad, you lock a portion of your funds against that specific order. This reserves liquidity exclusively for that trade.
+  </Step>
+  <Step title="Receive source tokens at settlement">
+    Once the ZK proof is verified on-chain, your designated recipient address receives the Bridger's source tokens automatically.
+  </Step>
+</Steps>
+
+<Tip>
+  You can keep multiple ads open simultaneously across different token pairs and chains. You can also withdraw unused funds from an ad at any time before it is matched.
+</Tip>
+
+## How Bridgers work
+
+As a Bridger, you select a liquidity ad that matches your desired route, then deposit your source tokens into the `OrderPortal` contract. The relayer handles proof generation in the background — you don't need to understand ZK cryptography to use ProofBridge.
+
+<Steps>
+  <Step title="Browse the marketplace">
+    Open the [ProofBridge app](https://proof-bridge.vercel.app/) and filter liquidity ads by source chain, destination chain, token pair, and rate.
+  </Step>
+  <Step title="Deposit source tokens">
+    Select an ad and submit your deposit. If you're bridging native ETH or HBAR, it is automatically wrapped on deposit. You'll sign a typed order that cryptographically binds the trade terms to both chains.
+  </Step>
+  <Step title="Wait for settlement">
+    The relayer detects your deposit, generates a ZK proof, and submits it to both chains. No further action is required on your part.
+  </Step>
+  <Step title="Receive destination tokens">
+    Once the proof is verified, your destination tokens are released directly to your specified recipient address on the destination chain.
+  </Step>
+</Steps>
+
+<Note>
+  No registration is required. Your connected wallet is your identity on ProofBridge.
+</Note>
+
+## Comparing the two roles
+
+| | Maker | Bridger |
+|---|---|---|
+| **Primary action** | Posts liquidity ads | Selects ads and deposits tokens |
+| **What you lock** | Destination-chain tokens | Source-chain tokens |
+| **What you receive** | Bridger's source tokens | Maker's destination tokens |
+| **Who sets the rate** | Maker (in the ad) | Bridger (accepts or rejects) |
+| **On-chain contract** | `AdManager` | `OrderPortal` |
+| **Risk** | Liquidity locked until settlement or withdrawal | Funds locked until proof verification |
+
+## Settlement: how both parties receive their tokens
+
+Settlement is simultaneous and trustless. The relayer generates a single ZK proof and submits it to both chains. The `Verifier` contract on each chain independently validates the proof, then releases funds to the appropriate recipient — the Bridger on the destination chain and the Maker on the source chain. Neither party can receive funds without the other, which eliminates counterparty risk.
+
+<Info>
+  The relayer cannot steal funds. It can only submit valid proofs to contracts that enforce the exact trade terms both parties agreed to.
+</Info>

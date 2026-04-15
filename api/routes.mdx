@@ -1,0 +1,206 @@
+---
+title: "Routes API: Browse Supported Cross-Chain Token Pairs"
+description: "Query ProofBridge cross-chain routes — the directional token pair mappings that define which tokens can be bridged between which chains."
+---
+
+A route defines a directional link between two tokens on two different chains: a source token (referred to as the **ad token**) and a destination token (referred to as the **order token**). When a Maker creates a liquidity ad, they select a route that determines which tokens they are providing liquidity for. When a Bridger creates a trade, they select an ad whose route matches their desired transfer.
+
+Routes are read-only through the public API. Only administrators can register new routes.
+
+<Tip>
+  Use routes to populate your token-pair selection UI. Filter by `adChainId` and `orderChainId` to show the routes available between two specific chains.
+</Tip>
+
+---
+
+## GET /v1/routes
+
+List available cross-chain routes with optional filters. Returns a paginated list.
+
+### Query parameters
+
+<ParamField query="adTokenId" type="string">
+  Filter by source token UUID. Returns only routes where the ad token matches.
+</ParamField>
+
+<ParamField query="orderTokenId" type="string">
+  Filter by destination token UUID. Returns only routes where the order token matches.
+</ParamField>
+
+<ParamField query="adChainId" type="string">
+  Filter by the source chain ID (e.g., `"296"` for Hedera Testnet).
+</ParamField>
+
+<ParamField query="orderChainId" type="string">
+  Filter by the destination chain ID (e.g., `"11155111"` for Ethereum Sepolia).
+</ParamField>
+
+<ParamField query="symbol" type="string">
+  Filter by token symbol. Returns routes where either token matches the symbol (e.g., `"USDC"`).
+</ParamField>
+
+<ParamField query="cursor" type="string">
+  Pagination cursor from a previous response's `nextCursor` field.
+</ParamField>
+
+<ParamField query="limit" type="number" default="25">
+  Number of results per page. Between 1 and 100.
+</ParamField>
+
+### Response fields
+
+<ResponseField name="data" type="Route[]" required>
+  Array of route objects. See [Route object fields](#route-object-fields) below.
+</ResponseField>
+
+<ResponseField name="nextCursor" type="string | null" required>
+  Cursor for the next page. `null` when you have reached the last page.
+</ResponseField>
+
+<CodeGroup>
+
+```json Response
+{
+  "data": [
+    {
+      "id": "123e4567-e89b-12d3-a456-426614174000",
+      "metadata": {},
+      "createdAt": "2026-01-10T00:00:00.000Z",
+      "updatedAt": "2026-01-10T00:00:00.000Z",
+      "adToken": {
+        "id": "d290f1ee-6c54-4b01-90e6-d701748f0851",
+        "symbol": "USDC",
+        "name": "USD Coin",
+        "address": "0xA0b86a33E6441cD3b27CA2E60b05C5FBA3B6dE9B",
+        "decimals": 6,
+        "kind": "ERC20",
+        "chain": {
+          "id": "f47ac10b-58cc-4372-a567-0e02b2c3d479",
+          "name": "Hedera Testnet",
+          "chainId": "296"
+        }
+      },
+      "orderToken": {
+        "id": "d290f1ee-6c54-4b01-90e6-d701748f0852",
+        "symbol": "USDC",
+        "name": "USD Coin",
+        "address": "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238",
+        "decimals": 6,
+        "kind": "ERC20",
+        "chain": {
+          "id": "a3bb189e-8bf9-3888-9b8c-4c2e38a29afc",
+          "name": "Ethereum Sepolia",
+          "chainId": "11155111"
+        }
+      }
+    }
+  ],
+  "nextCursor": null
+}
+```
+
+</CodeGroup>
+
+---
+
+## GET /v1/routes/:id
+
+Retrieve full details for a single route by its UUID.
+
+### Path parameters
+
+<ParamField path="id" type="string" required>
+  UUID of the route to retrieve.
+</ParamField>
+
+Returns a single [Route object](#route-object-fields).
+
+<CodeGroup>
+
+```json Response
+{
+  "id": "123e4567-e89b-12d3-a456-426614174000",
+  "metadata": {},
+  "createdAt": "2026-01-10T00:00:00.000Z",
+  "updatedAt": "2026-01-10T00:00:00.000Z",
+  "adToken": {
+    "id": "d290f1ee-6c54-4b01-90e6-d701748f0851",
+    "symbol": "USDC",
+    "name": "USD Coin",
+    "address": "0xA0b86a33E6441cD3b27CA2E60b05C5FBA3B6dE9B",
+    "decimals": 6,
+    "kind": "ERC20",
+    "chain": {
+      "id": "f47ac10b-58cc-4372-a567-0e02b2c3d479",
+      "name": "Hedera Testnet",
+      "chainId": "296"
+    }
+  },
+  "orderToken": {
+    "id": "d290f1ee-6c54-4b01-90e6-d701748f0852",
+    "symbol": "USDC",
+    "name": "USD Coin",
+    "address": "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238",
+    "decimals": 6,
+    "kind": "ERC20",
+    "chain": {
+      "id": "a3bb189e-8bf9-3888-9b8c-4c2e38a29afc",
+      "name": "Ethereum Sepolia",
+      "chainId": "11155111"
+    }
+  }
+}
+```
+
+</CodeGroup>
+
+---
+
+## Route object fields
+
+<ResponseField name="id" type="string" required>
+  UUID of the route.
+</ResponseField>
+
+<ResponseField name="metadata" type="object" required>
+  Arbitrary metadata associated with the route (may be an empty object).
+</ResponseField>
+
+<ResponseField name="createdAt" type="string" required>
+  ISO 8601 timestamp of when the route was registered.
+</ResponseField>
+
+<ResponseField name="updatedAt" type="string" required>
+  ISO 8601 timestamp of the last update.
+</ResponseField>
+
+<ResponseField name="adToken" type="object" required>
+  The source token for this route.
+  <Expandable title="Token fields">
+    <ResponseField name="id" type="string" required>
+      UUID of the token.
+    </ResponseField>
+    <ResponseField name="symbol" type="string" required>
+      Token symbol (e.g., `"USDC"`).
+    </ResponseField>
+    <ResponseField name="name" type="string" required>
+      Full token name (e.g., `"USD Coin"`).
+    </ResponseField>
+    <ResponseField name="address" type="string" required>
+      Token contract address on its chain.
+    </ResponseField>
+    <ResponseField name="decimals" type="number" required>
+      Number of decimal places (e.g., `6` for USDC, `18` for ETH).
+    </ResponseField>
+    <ResponseField name="kind" type="string" required>
+      Token standard: `"ERC20"`, `"NATIVE"`, `"SAC"`, or `"SEP41"`.
+    </ResponseField>
+    <ResponseField name="chain" type="object" required>
+      Chain information: `id` (UUID), `name` (display name), `chainId` (numeric chain ID string).
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="orderToken" type="object" required>
+  The destination token for this route. Same structure as `adToken`.
+</ResponseField>

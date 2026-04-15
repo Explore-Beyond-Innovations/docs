@@ -1,0 +1,748 @@
+---
+title: "Ads API: Create and Manage Liquidity Advertisements"
+description: "Create, fund, update, and close ProofBridge liquidity advertisements. Ads are the on-chain liquidity pools that bridgers discover and trade against."
+---
+
+Liquidity advertisements (ads) are the core primitive of the ProofBridge marketplace. A Maker creates an ad to signal that they are willing to provide liquidity on a specific cross-chain route — for example, locking USDC on Hedera so bridgers can receive USDC on Ethereum. The ad lifecycle moves through several states (`ACTIVE`, `PAUSED`, `EXHAUSTED`, `CLOSED`) as the Maker manages their liquidity.
+
+Most ad endpoints return blockchain transaction data (contract address, signature, auth token) that your application must submit to the smart contract to finalize the operation on-chain. After the on-chain transaction is confirmed, call the corresponding `/confirm` endpoint to notify the relayer.
+
+<Note>
+  All amounts are expressed in the smallest unit of the token (e.g., wei for EVM tokens, stroops for Stellar). Always pass amounts as decimal strings, not numbers, to avoid integer overflow.
+</Note>
+
+---
+
+## GET /v1/ads
+
+List ads with optional filters. Returns a paginated list.
+
+### Query parameters
+
+<ParamField query="routeId" type="string">
+  Filter by route UUID. Only ads that belong to this route are returned.
+</ParamField>
+
+<ParamField query="creatorAddress" type="string">
+  Filter by the ad creator's blockchain address.
+</ParamField>
+
+<ParamField query="adChainId" type="number">
+  Filter by the chain ID of the source (ad) token.
+</ParamField>
+
+<ParamField query="orderChainId" type="number">
+  Filter by the chain ID of the destination (order) token.
+</ParamField>
+
+<ParamField query="adTokenId" type="string">
+  Filter by the UUID of the source token.
+</ParamField>
+
+<ParamField query="orderTokenId" type="string">
+  Filter by the UUID of the destination token.
+</ParamField>
+
+<ParamField query="status" type="string">
+  Filter by ad status. One of `"ACTIVE"`, `"PAUSED"`, `"EXHAUSTED"`, or `"CLOSED"`.
+</ParamField>
+
+<ParamField query="cursor" type="string">
+  Pagination cursor from a previous response's `nextCursor` field.
+</ParamField>
+
+<ParamField query="limit" type="number" default="25">
+  Number of results to return per page.
+</ParamField>
+
+### Response fields
+
+<ResponseField name="data" type="Ad[]" required>
+  Array of ad objects. See the [Ad object fields](#ad-object-fields) section below.
+</ResponseField>
+
+<ResponseField name="nextCursor" type="string | null" required>
+  Cursor for the next page. `null` when you have reached the last page.
+</ResponseField>
+
+<CodeGroup>
+
+```json Response
+{
+  "data": [
+    {
+      "id": "b693ab22-5e73-47e8-9937-1d4459b8c081",
+      "creatorAddress": "0x742d35Cc6634C0532925a3b844Bc454e4438f44e",
+      "routeId": "123e4567-e89b-12d3-a456-426614174000",
+      "adTokenId": "d290f1ee-6c54-4b01-90e6-d701748f0851",
+      "orderTokenId": "d290f1ee-6c54-4b01-90e6-d701748f0852",
+      "poolAmount": "5000000000",
+      "availableAmount": "3200000000",
+      "minAmount": "100000000",
+      "maxAmount": "1000000000",
+      "status": "ACTIVE",
+      "metadata": null,
+      "adToken": {
+        "name": "USD Coin",
+        "symbol": "USDC",
+        "address": "0xA0b86a33E6441cD3b27CA2E60b05C5FBA3B6dE9B",
+        "decimals": 6,
+        "chainId": "296",
+        "chainKind": "EVM",
+        "kind": "ERC20"
+      },
+      "orderToken": {
+        "name": "USD Coin",
+        "symbol": "USDC",
+        "address": "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238",
+        "decimals": 6,
+        "chainId": "11155111",
+        "chainKind": "EVM",
+        "kind": "ERC20"
+      },
+      "createdAt": "2026-04-10T09:00:00.000Z",
+      "updatedAt": "2026-04-14T15:30:00.000Z"
+    }
+  ],
+  "nextCursor": null
+}
+```
+
+</CodeGroup>
+
+---
+
+## GET /v1/ads/:id
+
+Retrieve a single ad by its UUID.
+
+### Path parameters
+
+<ParamField path="id" type="string" required>
+  UUID of the ad to retrieve.
+</ParamField>
+
+### Response fields
+
+Returns a single [Ad object](#ad-object-fields).
+
+<CodeGroup>
+
+```json Response
+{
+  "id": "b693ab22-5e73-47e8-9937-1d4459b8c081",
+  "creatorAddress": "0x742d35Cc6634C0532925a3b844Bc454e4438f44e",
+  "routeId": "123e4567-e89b-12d3-a456-426614174000",
+  "adTokenId": "d290f1ee-6c54-4b01-90e6-d701748f0851",
+  "orderTokenId": "d290f1ee-6c54-4b01-90e6-d701748f0852",
+  "poolAmount": "5000000000",
+  "availableAmount": "3200000000",
+  "minAmount": "100000000",
+  "maxAmount": "1000000000",
+  "status": "ACTIVE",
+  "metadata": null,
+  "adToken": {
+    "name": "USD Coin",
+    "symbol": "USDC",
+    "address": "0xA0b86a33E6441cD3b27CA2E60b05C5FBA3B6dE9B",
+    "decimals": 6,
+    "chainId": "296",
+    "chainKind": "EVM",
+    "kind": "ERC20"
+  },
+  "orderToken": {
+    "name": "USD Coin",
+    "symbol": "USDC",
+    "address": "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238",
+    "decimals": 6,
+    "chainId": "11155111",
+    "chainKind": "EVM",
+    "kind": "ERC20"
+  },
+  "createdAt": "2026-04-10T09:00:00.000Z",
+  "updatedAt": "2026-04-14T15:30:00.000Z"
+}
+```
+
+</CodeGroup>
+
+---
+
+## POST /v1/ads/create
+
+Create a new liquidity ad. The response contains signed transaction data that you must submit to the `AdManager` smart contract on-chain to activate the ad. After the transaction is mined, call [POST /v1/ads/:id/confirm](#post-v1-ads-id-confirm) with the transaction hash.
+
+Requires authentication.
+
+### Request body
+
+<ParamField body="routeId" type="string" required>
+  UUID of the route this ad will serve. Determines the source and destination token pair.
+</ParamField>
+
+<ParamField body="creatorDstAddress" type="string" required>
+  The destination blockchain address where the Maker will receive bridged funds.
+</ParamField>
+
+<ParamField body="fundAmount" type="string" required>
+  Initial amount to deposit into the ad pool, in the smallest token unit (e.g., `"1000000000"` for 1000 USDC with 6 decimals).
+</ParamField>
+
+<ParamField body="minAmount" type="string">
+  Minimum trade amount the ad will accept, in the smallest token unit. Optional.
+</ParamField>
+
+<ParamField body="maxAmount" type="string">
+  Maximum trade amount the ad will accept, in the smallest token unit. Optional.
+</ParamField>
+
+<ParamField body="metadata" type="object">
+  Arbitrary JSON metadata to associate with the ad (e.g., display name, fee rate).
+</ParamField>
+
+### Response fields
+
+<ResponseField name="chainId" type="string" required>
+  Chain ID where the `AdManager` contract is deployed.
+</ResponseField>
+
+<ResponseField name="contractAddress" type="string" required>
+  Address of the `AdManager` contract to call.
+</ResponseField>
+
+<ResponseField name="signature" type="string" required>
+  Relayer signature authorizing the transaction.
+</ResponseField>
+
+<ResponseField name="signerPublicKey" type="string">
+  Relayer signer public key. Returned for Stellar chains only.
+</ResponseField>
+
+<ResponseField name="authToken" type="string" required>
+  Request authorization token to pass to the contract.
+</ResponseField>
+
+<ResponseField name="timeToExpire" type="number" required>
+  Seconds until the signed request expires and must be re-requested.
+</ResponseField>
+
+<ResponseField name="adId" type="string" required>
+  The relayer-assigned identifier for this ad.
+</ResponseField>
+
+<ResponseField name="adToken" type="string" required>
+  Token contract address for the ad (source) token.
+</ResponseField>
+
+<ResponseField name="initialAmount" type="string" required>
+  Initial funding amount confirmed by the relayer.
+</ResponseField>
+
+<ResponseField name="orderChainId" type="string" required>
+  Chain ID of the destination (order) chain.
+</ResponseField>
+
+<ResponseField name="adRecipient" type="string" required>
+  Recipient address for the ad on the source chain.
+</ResponseField>
+
+<ResponseField name="reqHash" type="string" required>
+  Hash of the relayer-signed request, used for on-chain verification.
+</ResponseField>
+
+<ResponseField name="chainKind" type="string" required>
+  Chain family of the ad contract: `"EVM"` or `"STELLAR"`.
+</ResponseField>
+
+<CodeGroup>
+
+```json Request
+{
+  "routeId": "123e4567-e89b-12d3-a456-426614174000",
+  "creatorDstAddress": "0x742d35Cc6634C0532925a3b844Bc454e4438f44e",
+  "fundAmount": "1000000000",
+  "minAmount": "10000000",
+  "maxAmount": "500000000",
+  "metadata": { "label": "My USDC liquidity ad" }
+}
+```
+
+```json Response
+{
+  "chainId": "296",
+  "contractAddress": "0xA1B2C3D4E5F60718293A4B5C6D7E8F9012345678",
+  "signature": "0x4d2a1c3e5f6b7a8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c01",
+  "authToken": "0xd3a4f5b6c7e8091a2b3c4d5e6f7089abcdef1234",
+  "timeToExpire": 3600,
+  "adId": "b693ab22-5e73-47e8-9937-1d4459b8c081",
+  "adToken": "0xA0b86a33E6441cD3b27CA2E60b05C5FBA3B6dE9B",
+  "initialAmount": "1000000000",
+  "orderChainId": "11155111",
+  "adRecipient": "0x742d35Cc6634C0532925a3b844Bc454e4438f44e",
+  "reqHash": "0x7b8c9d0e1f2a3b4c5d6e7f8091a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f901",
+  "chainKind": "EVM"
+}
+```
+
+</CodeGroup>
+
+---
+
+## POST /v1/ads/:id/fund
+
+Add more tokens to an existing ad's liquidity pool. Returns signed transaction data to submit to the `AdManager` contract. After the transaction is confirmed, call [POST /v1/ads/:id/confirm](#post-v1-ads-id-confirm).
+
+Requires authentication.
+
+### Path parameters
+
+<ParamField path="id" type="string" required>
+  UUID of the ad to fund.
+</ParamField>
+
+### Request body
+
+<ParamField body="poolAmountTopUp" type="string" required>
+  Amount to add to the pool, in the smallest token unit.
+</ParamField>
+
+### Response fields
+
+<ResponseField name="chainId" type="string" required>
+  Chain ID of the `AdManager` contract.
+</ResponseField>
+
+<ResponseField name="contractAddress" type="string" required>
+  Address of the `AdManager` contract to call.
+</ResponseField>
+
+<ResponseField name="signature" type="string" required>
+  Relayer signature for this funding request.
+</ResponseField>
+
+<ResponseField name="authToken" type="string" required>
+  Request authorization token to pass to the contract.
+</ResponseField>
+
+<ResponseField name="timeToExpire" type="number" required>
+  Seconds until this signed request expires.
+</ResponseField>
+
+<ResponseField name="adId" type="string" required>
+  The ad identifier.
+</ResponseField>
+
+<ResponseField name="amount" type="string" required>
+  Funding amount confirmed by the relayer.
+</ResponseField>
+
+<ResponseField name="reqHash" type="string" required>
+  Hash of the relayer-signed request.
+</ResponseField>
+
+<ResponseField name="chainKind" type="string" required>
+  `"EVM"` or `"STELLAR"`.
+</ResponseField>
+
+<CodeGroup>
+
+```json Request
+{
+  "poolAmountTopUp": "500000000"
+}
+```
+
+```json Response
+{
+  "chainId": "296",
+  "contractAddress": "0xA1B2C3D4E5F60718293A4B5C6D7E8F9012345678",
+  "signature": "0x1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b01",
+  "authToken": "0xc7d8e9f0a1b2c3d4e5f607081920abcdef567890",
+  "timeToExpire": 3600,
+  "adId": "b693ab22-5e73-47e8-9937-1d4459b8c081",
+  "amount": "500000000",
+  "reqHash": "0x3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c45",
+  "chainKind": "EVM"
+}
+```
+
+</CodeGroup>
+
+---
+
+## POST /v1/ads/:id/withdraw
+
+Initiate a partial withdrawal from an ad's pool. Returns signed transaction data to submit to the `AdManager` contract. After the transaction is confirmed, call [POST /v1/ads/:id/confirm](#post-v1-ads-id-confirm).
+
+Requires authentication.
+
+### Path parameters
+
+<ParamField path="id" type="string" required>
+  UUID of the ad to withdraw from.
+</ParamField>
+
+### Request body
+
+<ParamField body="poolAmountWithdraw" type="string" required>
+  Amount to withdraw from the pool, in the smallest token unit.
+</ParamField>
+
+<ParamField body="to" type="string" required>
+  Destination address to receive the withdrawn funds.
+</ParamField>
+
+### Response fields
+
+<ResponseField name="chainId" type="string" required>
+  Chain ID of the `AdManager` contract.
+</ResponseField>
+
+<ResponseField name="contractAddress" type="string" required>
+  Address of the `AdManager` contract to call.
+</ResponseField>
+
+<ResponseField name="signature" type="string" required>
+  Relayer signature for this withdrawal request.
+</ResponseField>
+
+<ResponseField name="authToken" type="string" required>
+  Request authorization token.
+</ResponseField>
+
+<ResponseField name="timeToExpire" type="number" required>
+  Seconds until this signed request expires.
+</ResponseField>
+
+<ResponseField name="adId" type="string" required>
+  The ad identifier.
+</ResponseField>
+
+<ResponseField name="amount" type="string" required>
+  Withdrawal amount confirmed by the relayer.
+</ResponseField>
+
+<ResponseField name="to" type="string" required>
+  Destination address for the withdrawn funds.
+</ResponseField>
+
+<ResponseField name="reqHash" type="string" required>
+  Hash of the relayer-signed request.
+</ResponseField>
+
+<ResponseField name="chainKind" type="string" required>
+  `"EVM"` or `"STELLAR"`.
+</ResponseField>
+
+<CodeGroup>
+
+```json Request
+{
+  "poolAmountWithdraw": "200000000",
+  "to": "0x742d35Cc6634C0532925a3b844Bc454e4438f44e"
+}
+```
+
+```json Response
+{
+  "chainId": "296",
+  "contractAddress": "0xA1B2C3D4E5F60718293A4B5C6D7E8F9012345678",
+  "signature": "0x9f0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a01",
+  "authToken": "0xe5f6a7b8c9d0e1f2a3b4c5d6e7f8091011121314",
+  "timeToExpire": 3600,
+  "adId": "b693ab22-5e73-47e8-9937-1d4459b8c081",
+  "amount": "200000000",
+  "to": "0x742d35Cc6634C0532925a3b844Bc454e4438f44e",
+  "reqHash": "0x5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e",
+  "chainKind": "EVM"
+}
+```
+
+</CodeGroup>
+
+---
+
+## POST /v1/ads/:id/confirm
+
+Notify the relayer that a previously-initiated blockchain transaction (create, fund, or withdraw) has been confirmed on-chain. This updates the ad's state in the relayer database.
+
+Requires authentication.
+
+### Path parameters
+
+<ParamField path="id" type="string" required>
+  UUID of the ad.
+</ParamField>
+
+### Request body
+
+<ParamField body="txHash" type="string" required>
+  Transaction hash of the confirmed on-chain transaction.
+</ParamField>
+
+<ParamField body="signature" type="string">
+  Optional additional signature for the confirmation.
+</ParamField>
+
+### Response fields
+
+<ResponseField name="adId" type="string" required>
+  UUID of the confirmed ad.
+</ResponseField>
+
+<ResponseField name="success" type="boolean" required>
+  `true` when the relayer successfully recorded the confirmation.
+</ResponseField>
+
+<CodeGroup>
+
+```json Request
+{
+  "txHash": "0x123f681646d4a755815f9cb19e1acc8565a0c2ac8e625e37ef3dbf9c8feb8a7e"
+}
+```
+
+```json Response
+{
+  "adId": "b693ab22-5e73-47e8-9937-1d4459b8c081",
+  "success": true
+}
+```
+
+</CodeGroup>
+
+---
+
+## PATCH /v1/ads/:id/update
+
+Update mutable parameters on an existing ad. You can change the ad's status, min/max trade amounts, or metadata without an on-chain transaction.
+
+Requires authentication.
+
+### Path parameters
+
+<ParamField path="id" type="string" required>
+  UUID of the ad to update.
+</ParamField>
+
+### Request body
+
+<ParamField body="status" type="string">
+  New status for the ad. Must be `"ACTIVE"` or `"PAUSED"`.
+</ParamField>
+
+<ParamField body="minAmount" type="string">
+  New minimum trade amount in the smallest token unit.
+</ParamField>
+
+<ParamField body="maxAmount" type="string">
+  New maximum trade amount in the smallest token unit.
+</ParamField>
+
+<ParamField body="metadata" type="object">
+  Updated metadata to replace the existing ad metadata.
+</ParamField>
+
+### Response fields
+
+<ResponseField name="id" type="string" required>
+  UUID of the updated ad.
+</ResponseField>
+
+<ResponseField name="creatorAddress" type="string" required>
+  Address of the ad creator.
+</ResponseField>
+
+<ResponseField name="minAmount" type="string | null" required>
+  Updated minimum amount, or `null` if unset.
+</ResponseField>
+
+<ResponseField name="maxAmount" type="string | null" required>
+  Updated maximum amount, or `null` if unset.
+</ResponseField>
+
+<ResponseField name="metadata" type="any" required>
+  Updated metadata.
+</ResponseField>
+
+<CodeGroup>
+
+```json Request
+{
+  "status": "PAUSED",
+  "minAmount": "50000000",
+  "maxAmount": "750000000"
+}
+```
+
+```json Response
+{
+  "id": "b693ab22-5e73-47e8-9937-1d4459b8c081",
+  "creatorAddress": "0x742d35Cc6634C0532925a3b844Bc454e4438f44e",
+  "minAmount": "50000000",
+  "maxAmount": "750000000",
+  "metadata": null
+}
+```
+
+</CodeGroup>
+
+---
+
+## POST /v1/ads/:id/close
+
+Permanently close an ad and withdraw all remaining funds. Returns signed transaction data to submit to the `AdManager` contract. This action is irreversible.
+
+Requires authentication.
+
+<Warning>
+  Closing an ad is permanent. Any active trades against this ad must be settled before closing.
+</Warning>
+
+### Path parameters
+
+<ParamField path="id" type="string" required>
+  UUID of the ad to close.
+</ParamField>
+
+### Request body
+
+<ParamField body="to" type="string" required>
+  Address to receive the remaining pool balance when the ad is closed.
+</ParamField>
+
+### Response fields
+
+<ResponseField name="chainId" type="string" required>
+  Chain ID of the `AdManager` contract.
+</ResponseField>
+
+<ResponseField name="contractAddress" type="string" required>
+  Address of the `AdManager` contract to call.
+</ResponseField>
+
+<ResponseField name="signature" type="string" required>
+  Relayer signature for this close request.
+</ResponseField>
+
+<ResponseField name="authToken" type="string" required>
+  Request authorization token.
+</ResponseField>
+
+<ResponseField name="timeToExpire" type="number" required>
+  Seconds until this signed request expires.
+</ResponseField>
+
+<ResponseField name="adId" type="string" required>
+  The ad identifier.
+</ResponseField>
+
+<ResponseField name="to" type="string" required>
+  Destination address for the remaining funds.
+</ResponseField>
+
+<ResponseField name="reqHash" type="string" required>
+  Hash of the relayer-signed request.
+</ResponseField>
+
+<ResponseField name="chainKind" type="string" required>
+  `"EVM"` or `"STELLAR"`.
+</ResponseField>
+
+<CodeGroup>
+
+```json Request
+{
+  "to": "0x742d35Cc6634C0532925a3b844Bc454e4438f44e"
+}
+```
+
+```json Response
+{
+  "chainId": "296",
+  "contractAddress": "0xA1B2C3D4E5F60718293A4B5C6D7E8F9012345678",
+  "signature": "0xd4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f601",
+  "authToken": "0xa1b2c3d4e5f6070819202122232425262728293031",
+  "timeToExpire": 3600,
+  "adId": "b693ab22-5e73-47e8-9937-1d4459b8c081",
+  "to": "0x742d35Cc6634C0532925a3b844Bc454e4438f44e",
+  "reqHash": "0xe7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8",
+  "chainKind": "EVM"
+}
+```
+
+</CodeGroup>
+
+---
+
+## Ad object fields
+
+The following fields appear on every ad object returned by `GET /v1/ads` and `GET /v1/ads/:id`.
+
+<ResponseField name="id" type="string" required>
+  UUID of the ad.
+</ResponseField>
+
+<ResponseField name="creatorAddress" type="string" required>
+  Blockchain address of the Maker who created the ad.
+</ResponseField>
+
+<ResponseField name="routeId" type="string" required>
+  UUID of the cross-chain route this ad serves.
+</ResponseField>
+
+<ResponseField name="adTokenId" type="string" required>
+  UUID of the source (ad) token.
+</ResponseField>
+
+<ResponseField name="orderTokenId" type="string" required>
+  UUID of the destination (order) token.
+</ResponseField>
+
+<ResponseField name="poolAmount" type="string" required>
+  Total amount ever deposited into this ad's pool, in the smallest token unit.
+</ResponseField>
+
+<ResponseField name="availableAmount" type="string" required>
+  Current available (unlocked) balance in the pool, in the smallest token unit.
+</ResponseField>
+
+<ResponseField name="minAmount" type="string | null" required>
+  Minimum trade amount the ad accepts, or `null` if no minimum is set.
+</ResponseField>
+
+<ResponseField name="maxAmount" type="string | null" required>
+  Maximum trade amount the ad accepts, or `null` if no maximum is set.
+</ResponseField>
+
+<ResponseField name="status" type="string" required>
+  Current ad status: `"ACTIVE"`, `"PAUSED"`, `"EXHAUSTED"`, or `"CLOSED"`.
+</ResponseField>
+
+<ResponseField name="metadata" type="any">
+  Arbitrary metadata set by the Maker. Can be `null`.
+</ResponseField>
+
+<ResponseField name="adToken" type="object" required>
+  <Expandable title="Token fields">
+    <ResponseField name="name" type="string">Token name (e.g., `"USD Coin"`).</ResponseField>
+    <ResponseField name="symbol" type="string">Token symbol (e.g., `"USDC"`).</ResponseField>
+    <ResponseField name="address" type="string">Token contract address.</ResponseField>
+    <ResponseField name="decimals" type="number">Number of decimal places.</ResponseField>
+    <ResponseField name="chainId" type="string">Chain ID where this token lives.</ResponseField>
+    <ResponseField name="chainKind" type="string">`"EVM"` or `"STELLAR"`.</ResponseField>
+    <ResponseField name="kind" type="string">Token standard: `"ERC20"`, `"NATIVE"`, `"SAC"`, or `"SEP41"`.</ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="orderToken" type="object" required>
+  Same structure as `adToken`, for the destination token.
+</ResponseField>
+
+<ResponseField name="createdAt" type="string" required>
+  ISO 8601 timestamp of when the ad was created.
+</ResponseField>
+
+<ResponseField name="updatedAt" type="string" required>
+  ISO 8601 timestamp of the last update to the ad.
+</ResponseField>

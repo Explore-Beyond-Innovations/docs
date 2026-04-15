@@ -1,0 +1,127 @@
+---
+title: "Bridge tokens across chains using ProofBridge transfers"
+description: "Step-by-step guide to making a cross-chain transfer as a Bridger: browse liquidity ads, deposit funds, and receive destination tokens via ZK proof."
+---
+
+Bridging tokens on ProofBridge means transferring assets from one blockchain to another through a peer-to-peer match with a liquidity provider (Maker). You deposit your source-chain tokens into the OrderPortal contract, the Maker locks their destination-chain tokens against your order, and a zero-knowledge proof settles both sides trustlessly. The entire process typically completes within a few minutes.
+
+<Note>
+  ProofBridge currently operates on testnet (Ethereum Sepolia, Hedera Testnet, and Stellar). Use testnet funds only. Get Sepolia ETH from the [Sepolia faucet](https://sepoliafaucet.com) and HBAR from the [Hedera portal](https://portal.hedera.com).
+</Note>
+
+## Prerequisites
+
+- A connected and authenticated wallet on the source chain. See [Connect your wallet](/guides/connect-wallet).
+- Sufficient testnet funds on the source chain to cover the transfer amount.
+
+## Bridge your tokens
+
+<Steps>
+  <Step title="Connect your wallet on the source chain">
+    Open [ProofBridge](https://proof-bridge.vercel.app) and connect your wallet to the source chain (the network where you currently hold tokens). If you are not yet connected, follow the [connect wallet guide](/guides/connect-wallet).
+
+    Make sure your wallet is set to the correct network — for example, Ethereum Sepolia if you are sending ETH.
+  </Step>
+
+  <Step title="Browse the liquidity marketplace">
+    Navigate to the **Marketplace** tab. The app fetches available liquidity ads from the relayer (`GET /v1/ads`). Each ad shows:
+
+    - Source chain and destination chain
+    - Token pair (for example, ETH → XLM)
+    - Available liquidity amount
+    - Maker's offered rate
+
+    Use the filters to narrow results by source chain, destination chain, or token symbol.
+  </Step>
+
+  <Step title="Select an ad that matches your route">
+    Click an ad that matches the chain pair and token pair you want. Review the details — including the available amount and any rate information — then click **Select** or **Use this ad**.
+
+    <Tip>
+      Choose an ad with sufficient liquidity to cover your intended transfer amount. If an ad does not have enough available balance, it will not appear as selectable for your amount.
+    </Tip>
+  </Step>
+
+  <Step title="Enter the transfer amount and recipient address">
+    In the order form, enter:
+
+    - **Amount**: How many tokens you want to send from the source chain.
+    - **Recipient address**: The wallet address on the destination chain that should receive the tokens.
+
+    <Note>
+      If you are sending native ETH or HBAR, it is automatically wrapped to WETH or WHBAR on deposit. You do not need to wrap tokens manually before bridging.
+    </Note>
+  </Step>
+
+  <Step title="Request pre-authorization">
+    Click **Request authorization**. In the background, the frontend calls `POST /v1/trades/create` on the relayer. The relayer validates the route, checks the ad has sufficient liquidity, and returns pre-authorized transaction parameters.
+
+    This step does not submit anything on-chain yet. Wait for the authorization confirmation to appear — it takes a few seconds.
+  </Step>
+
+  <Step title="Sign and submit the deposit transaction">
+    Once authorized, click **Confirm and deposit**. Your wallet opens a transaction prompt showing the OrderPortal contract address and the deposit amount. Review the details and click **Confirm** in your wallet.
+
+    This transaction deposits your source-chain tokens into the OrderPortal smart contract and records the order hash in the on-chain Merkle Mountain Range.
+
+    <Warning>
+      Only approve this transaction after reviewing the contract address and amount carefully. Once submitted, the deposit is locked until the ZK proof settles both sides.
+    </Warning>
+  </Step>
+
+  <Step title="Confirm the transaction to the relayer">
+    After the deposit transaction is confirmed on-chain, click **Notify relayer** (or the app does this automatically). This triggers the relayer callback (`POST /v1/trades/:id/confirm`), which tells the relayer to verify the transaction and begin proof generation.
+
+    <Note>
+      The relayer operates on a pre-authorization model — it does not monitor chain events automatically. Your callback is what prompts it to proceed. If you close the app before confirming, you can return and complete this step from the [order tracking page](/guides/track-orders).
+    </Note>
+  </Step>
+
+  <Step title="Wait for ZK proof generation and settlement">
+    The relayer fetches the Merkle inclusion proof for your order from both chains, then triggers the Noir proof circuit to generate a zero-knowledge proof. This typically takes **1–3 minutes**.
+
+    Once the proof is ready, the relayer submits it to both chains:
+
+    1. **AdManager** on the destination chain releases the Maker's tokens to your recipient address.
+    2. **OrderPortal** on the source chain releases your deposited tokens to the Maker's recipient address.
+
+    Both settlements happen atomically — if one side fails, neither releases funds.
+  </Step>
+
+  <Step title="Receive your destination tokens">
+    When settlement is complete, the destination-chain tokens arrive at the recipient address you specified. You can verify the transfer in your destination-chain wallet or block explorer.
+
+    The order status in ProofBridge updates to **Completed**. See [Track orders](/guides/track-orders) to monitor status throughout the process.
+  </Step>
+</Steps>
+
+## Estimated time
+
+| Phase | Typical duration |
+|---|---|
+| Pre-authorization | < 5 seconds |
+| Deposit transaction confirmation | 15–60 seconds (chain-dependent) |
+| ZK proof generation | 1–3 minutes |
+| Settlement on both chains | 30–90 seconds |
+
+Total end-to-end time is usually **3–5 minutes**.
+
+## If your transfer is stuck
+
+<AccordionGroup>
+  <Accordion title="The order is still in 'created' status after several minutes">
+    The relayer callback may not have been sent. Navigate to **My Orders**, find the order, and click **Notify relayer** to manually trigger the confirmation step.
+  </Accordion>
+
+  <Accordion title="The order is in 'locked' status for more than 10 minutes">
+    Proof generation is in progress. This phase can occasionally take longer due to circuit computation. Wait a few more minutes, then check again. If the status does not change after 15 minutes, contact support.
+  </Accordion>
+
+  <Accordion title="The order failed or was rejected">
+    If the pre-authorization check fails (for example, the ad's liquidity was taken by another Bridger between your selection and submission), the order is rejected before any on-chain transaction. Return to the marketplace and select a different ad. No funds are at risk.
+  </Accordion>
+</AccordionGroup>
+
+<Tip>
+  Keep the ProofBridge tab open until the order reaches **Completed** status. This ensures the relayer callback is sent automatically after your deposit confirms.
+</Tip>

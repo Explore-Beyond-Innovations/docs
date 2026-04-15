@@ -1,0 +1,126 @@
+---
+title: "Supported networks, routes, and contract addresses"
+description: "ProofBridge is live on Ethereum Sepolia, Hedera Testnet, and Stellar Testnet. View active routes, deployed contract addresses, and planned expansions."
+---
+
+ProofBridge is currently deployed on testnet networks. You can bridge assets between Ethereum Sepolia, Hedera Testnet, and Stellar Testnet using the [ProofBridge app](https://proof-bridge.vercel.app/) today. Mainnet deployments and additional EVM chains are on the roadmap.
+
+<Warning>
+  ProofBridge is **testnet-only** at this time. Do not send mainnet assets to any of the contract addresses below. Mainnet deployment is on the roadmap.
+</Warning>
+
+## Live networks
+
+<CardGroup cols={3}>
+  <Card title="Ethereum Sepolia" icon="ethereum">
+    Chain ID: **11155111**
+
+    Full support for ETH bridging (auto-wrapped to WETH), HBAR wrapping, and the ProofBridge ERC20 example token.
+  </Card>
+  <Card title="Hedera Testnet" icon="h">
+    Chain ID: **296**
+
+    Full support for HBAR bridging (auto-wrapped to WHBAR), ETH wrapping, and the ProofBridge ERC20 example token.
+  </Card>
+  <Card title="Stellar Testnet" icon="star">
+    Chain ID: N/A (Stellar)
+
+    Soroban-based contracts using native XLM, Stellar Asset Contracts (SAC), and SEP-41 tokens.
+  </Card>
+</CardGroup>
+
+## Active cross-chain routes
+
+<Tabs>
+  <Tab title="ETH ↔ wETH">
+    Bridge native ETH from Ethereum Sepolia to wrapped ETH on Hedera, or in the reverse direction.
+
+    | Direction | Source token | Destination token |
+    |---|---|---|
+    | Sepolia → Hedera | ETH (auto-wrapped to WETH) | wETH |
+    | Hedera → Sepolia | wETH | ETH (auto-unwrapped) |
+
+    Native ETH is automatically wrapped to WETH on deposit and unwrapped back to ETH on withdrawal. You never need to manually wrap or unwrap.
+  </Tab>
+  <Tab title="HBAR ↔ wHBAR">
+    Bridge native HBAR from Hedera Testnet to wrapped HBAR on Ethereum Sepolia, or in the reverse direction.
+
+    | Direction | Source token | Destination token |
+    |---|---|---|
+    | Hedera → Sepolia | HBAR (auto-wrapped to WHBAR) | wHBAR |
+    | Sepolia → Hedera | wHBAR | HBAR (auto-unwrapped) |
+
+    The same automatic wrap/unwrap behavior applies to HBAR.
+  </Tab>
+  <Tab title="ProofBridge Token">
+    An ERC20 example token deployed on both Sepolia and Hedera, demonstrating cross-chain ERC20 bridging.
+
+    | Direction | Source token | Destination token |
+    |---|---|---|
+    | Sepolia → Hedera | ProofBridge Token (Sepolia) | ProofBridge Token (Hedera) |
+    | Hedera → Sepolia | ProofBridge Token (Hedera) | ProofBridge Token (Sepolia) |
+
+    This route is primarily for testing and developer integration. It shows how any ERC20 token pair can be configured on ProofBridge.
+  </Tab>
+</Tabs>
+
+## Deployed contract addresses
+
+### Ethereum Sepolia (Chain ID: 11155111)
+
+| Contract | Address |
+|---|---|
+| Verifier | `0xDc930A3b5CC073092750aE7f4FF45409B2428592` |
+| MerkleManager | `0x397E7356aF447B2754D8Ea0838d285FB78F2482d` |
+| AdManager | `0x366D90CB2A8606A82164C717cF1889c3ed5aE1f4` |
+| OrderPortal | `0xF1C313faAD40ccAeDb4Fd3e7C838993569E2572C` |
+| wNativeToken (WETH) | `0xf635e2661c950c7947a13d03e16076F7b5aA5DbE` |
+| wHBAR | `0xdf386137388b4f39873708fD11505AF86238b666` |
+| ProofBridge Token | `0x1B62aDdB315CC98ab4625ffA170c1BC5C75F9da7` |
+
+You can verify these contracts on [Sepolia Etherscan](https://sepolia.etherscan.io/).
+
+### Hedera Testnet (Chain ID: 296)
+
+| Contract | Address |
+|---|---|
+| Verifier | `0xDbf6dA1aBD40f7b7eA7B935663D4F78325930e48` |
+| MerkleManager | `0x04cD7aCc919F2916Ae0eAEa7BFc40962BC99AC8E` |
+| AdManager | `0x9AeF534c50D4BAA10c2cBA14590a37798Ea4c768` |
+| OrderPortal | `0x4C5dDf1CC71a709704d26648f71bD3E629BE5914` |
+| wNativeToken (WHBAR) | `0xb1f616b8134f602c3bb465fb5b5e6565ccad37ed` |
+| wETH | `0x291b2e449Dd2C036142186Ab2Ef81DE6c68E00fe` |
+| ProofBridge Token | `0x9318E8f8C1F7Bff8c00A062F80b391866fBE8d87` |
+
+You can verify these contracts on [HashScan](https://hashscan.io/testnet/).
+
+### Stellar Testnet
+
+Stellar contracts are deployed using Soroban (the Stellar smart contract platform). Contract IDs are available in the [ProofBridge repository](https://github.com/Explore-Beyond-Innovations/ProofBridge).
+
+## Planned networks
+
+ProofBridge is designed to work with any EVM-compatible chain. The following networks are planned for future deployment:
+
+<CardGroup cols={2}>
+  <Card title="Polygon" icon="circle">
+    EVM-compatible, low gas fees, wide DeFi ecosystem.
+  </Card>
+  <Card title="Arbitrum" icon="circle">
+    Ethereum Layer 2, high throughput, low latency.
+  </Card>
+  <Card title="Optimism" icon="circle">
+    Ethereum Layer 2, OP Stack ecosystem.
+  </Card>
+  <Card title="Base" icon="circle">
+    Ethereum Layer 2, Coinbase-backed OP Stack chain.
+  </Card>
+</CardGroup>
+
+<Info>
+  Adding a new EVM chain requires deploying the four contracts (`Verifier`, `MerkleManager`, `AdManager`, `OrderPortal`), configuring bidirectional chain links, and registering token routes. See the [smart contracts reference](/reference/smart-contracts) for details.
+</Info>
+
+## No registration required
+
+You connect with your wallet — there are no accounts, usernames, or KYC requirements. Your wallet address is your identity on ProofBridge, and all trade terms are enforced on-chain rather than by any off-chain service.

@@ -1,0 +1,688 @@
+---
+title: "Trades API: Manage the Cross-Chain Trade Lifecycle"
+description: "Initiate cross-chain trades, retrieve order parameters, lock and unlock funds, and confirm on-chain actions through the ProofBridge Trades API."
+---
+
+A trade represents a single cross-chain transfer initiated by a Bridger against a Maker's liquidity ad. The trade lifecycle spans two chains: the Bridger deposits tokens on the order chain via the `OrderPortal` contract, and the Maker locks tokens on the ad chain via the `AdManager` contract. Settlement is coordinated by zero-knowledge proofs that unlock funds for both parties simultaneously.
+
+Several trade endpoints return signed contract call data that your application must submit on-chain. After each on-chain transaction is confirmed, call the corresponding `/confirm` endpoint to advance the trade state in the relayer.
+
+<Note>
+  All amounts are decimal strings representing values in the smallest token unit (e.g., `"1000000"` for 1 USDC with 6 decimals).
+</Note>
+
+---
+
+## GET /v1/trades/all
+
+List trades with optional filters. Returns a paginated list.
+
+### Query parameters
+
+<ParamField query="routeId" type="string">
+  Filter by route UUID.
+</ParamField>
+
+<ParamField query="adId" type="string">
+  Filter by the advertisement UUID.
+</ParamField>
+
+<ParamField query="adCreatorAddress" type="string">
+  Filter by the Maker's blockchain address.
+</ParamField>
+
+<ParamField query="bridgerAddress" type="string">
+  Filter by the Bridger's blockchain address.
+</ParamField>
+
+<ParamField query="adTokenId" type="string">
+  Filter by the UUID of the source token.
+</ParamField>
+
+<ParamField query="orderTokenId" type="string">
+  Filter by the UUID of the destination token.
+</ParamField>
+
+<ParamField query="minAmount" type="string">
+  Return only trades with an amount greater than or equal to this value.
+</ParamField>
+
+<ParamField query="maxAmount" type="string">
+  Return only trades with an amount less than or equal to this value.
+</ParamField>
+
+<ParamField query="cursor" type="string">
+  Pagination cursor from a previous response's `nextCursor` field.
+</ParamField>
+
+<ParamField query="limit" type="number" default="25">
+  Number of results per page. Between 1 and 100.
+</ParamField>
+
+### Response fields
+
+<ResponseField name="data" type="Trade[]" required>
+  Array of trade objects. See the [Trade object fields](#trade-object-fields) section.
+</ResponseField>
+
+<ResponseField name="nextCursor" type="string | null" required>
+  Cursor for the next page. `null` on the last page.
+</ResponseField>
+
+<CodeGroup>
+
+```json Response
+{
+  "data": [
+    {
+      "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+      "routeId": "123e4567-e89b-12d3-a456-426614174000",
+      "adId": "b693ab22-5e73-47e8-9937-1d4459b8c081",
+      "adCreatorAddress": "0x742d35Cc6634C0532925a3b844Bc454e4438f44e",
+      "adChainId": "296",
+      "orderChainId": "11155111",
+      "bridgerAddress": "0x1A2B3C4D5E6F7A8B9C0D1E2F3A4B5C6D7E8F9A0B",
+      "amount": "500000000",
+      "status": "PENDING",
+      "adCreatorClaimed": false,
+      "bridgerClaimed": false,
+      "createdAt": "2026-04-15T10:00:00.000Z",
+      "updatedAt": "2026-04-15T10:00:00.000Z",
+      "ad": {
+        "id": "b693ab22-5e73-47e8-9937-1d4459b8c081",
+        "routeId": "123e4567-e89b-12d3-a456-426614174000",
+        "creatorAddress": "0x742d35Cc6634C0532925a3b844Bc454e4438f44e"
+      },
+      "route": {
+        "id": "123e4567-e89b-12d3-a456-426614174000",
+        "adToken": {
+          "id": "d290f1ee-6c54-4b01-90e6-d701748f0851",
+          "symbol": "USDC",
+          "kind": "ERC20",
+          "address": "0xA0b86a33E6441cD3b27CA2E60b05C5FBA3B6dE9B",
+          "decimals": 6,
+          "chain": { "name": "Hedera Testnet", "chainId": "296", "kind": "EVM" }
+        },
+        "orderToken": {
+          "id": "d290f1ee-6c54-4b01-90e6-d701748f0852",
+          "symbol": "USDC",
+          "kind": "ERC20",
+          "address": "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238",
+          "decimals": 6,
+          "chain": { "name": "Ethereum Sepolia", "chainId": "11155111", "kind": "EVM" }
+        }
+      }
+    }
+  ],
+  "nextCursor": null
+}
+```
+
+</CodeGroup>
+
+---
+
+## GET /v1/trades/:id
+
+Retrieve a single trade by its UUID.
+
+### Path parameters
+
+<ParamField path="id" type="string" required>
+  UUID of the trade to retrieve.
+</ParamField>
+
+Returns a single [Trade object](#trade-object-fields).
+
+---
+
+## POST /v1/trades/create
+
+Create a new trade as a Bridger against an existing ad. The response contains signed transaction data that you must submit to the `OrderPortal` contract on the order chain to make the deposit. After the deposit is confirmed, call [POST /v1/trades/:id/confirm](#post-v1-trades-id-confirm).
+
+Requires authentication.
+
+### Request body
+
+<ParamField body="adId" type="string" required>
+  UUID of the ad to trade against.
+</ParamField>
+
+<ParamField body="routeId" type="string" required>
+  UUID of the route for this trade. Must match the route associated with the ad.
+</ParamField>
+
+<ParamField body="amount" type="string" required>
+  Amount of tokens to deposit, in the smallest token unit. Must fall within the ad's `minAmount` and `maxAmount` constraints.
+</ParamField>
+
+<ParamField body="bridgerDstAddress" type="string" required>
+  The Bridger's destination address on the ad chain, where the Maker's tokens will be released.
+</ParamField>
+
+### Response fields
+
+<ResponseField name="tradeId" type="string" required>
+  UUID of the newly created trade.
+</ResponseField>
+
+<ResponseField name="reqContractDetails" type="object" required>
+  <Expandable title="Contract call details">
+    <ResponseField name="chainId" type="string" required>
+      Chain ID of the `OrderPortal` contract.
+    </ResponseField>
+    <ResponseField name="contractAddress" type="string" required>
+      Address of the `OrderPortal` contract to call.
+    </ResponseField>
+    <ResponseField name="signature" type="string" required>
+      Relayer signature authorizing this order.
+    </ResponseField>
+    <ResponseField name="authToken" type="string" required>
+      Authorization token to pass to the contract.
+    </ResponseField>
+    <ResponseField name="timeToExpire" type="number" required>
+      Seconds until this signed request expires.
+    </ResponseField>
+    <ResponseField name="orderParams" type="object" required>
+      Structured order parameters for the `OrderPortal` contract. Contains token addresses, amounts, chain IDs, bridger/creator addresses, and a cryptographic salt.
+    </ResponseField>
+    <ResponseField name="orderHash" type="string" required>
+      Hash of the order parameters, used for on-chain verification.
+    </ResponseField>
+    <ResponseField name="reqHash" type="string" required>
+      Hash of the relayer-signed request.
+    </ResponseField>
+    <ResponseField name="chainKind" type="string" required>
+      `"EVM"` or `"STELLAR"`.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<CodeGroup>
+
+```json Request
+{
+  "adId": "b693ab22-5e73-47e8-9937-1d4459b8c081",
+  "routeId": "123e4567-e89b-12d3-a456-426614174000",
+  "amount": "500000000",
+  "bridgerDstAddress": "0x1A2B3C4D5E6F7A8B9C0D1E2F3A4B5C6D7E8F9A0B"
+}
+```
+
+```json Response
+{
+  "tradeId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+  "reqContractDetails": {
+    "chainId": "11155111",
+    "contractAddress": "0xB2C3D4E5F60718293A4B5C6D7E8F9012345678AB",
+    "signature": "0x8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b01",
+    "authToken": "0xf0a1b2c3d4e5f607081920212223242526272829",
+    "timeToExpire": 3600,
+    "orderParams": {
+      "orderChainToken": "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238",
+      "adChainToken": "0xA0b86a33E6441cD3b27CA2E60b05C5FBA3B6dE9B",
+      "amount": "500000000",
+      "bridger": "0x1A2B3C4D5E6F7A8B9C0D1E2F3A4B5C6D7E8F9A0B",
+      "orderRecipient": "0x1A2B3C4D5E6F7A8B9C0D1E2F3A4B5C6D7E8F9A0B",
+      "adChainId": "296",
+      "adManager": "0xA1B2C3D4E5F60718293A4B5C6D7E8F9012345678",
+      "adId": "b693ab22-5e73-47e8-9937-1d4459b8c081",
+      "adCreator": "0x742d35Cc6634C0532925a3b844Bc454e4438f44e",
+      "adRecipient": "0x742d35Cc6634C0532925a3b844Bc454e4438f44e",
+      "salt": "7392841056"
+    },
+    "orderHash": "0x4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f",
+    "reqHash": "0x6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b",
+    "chainKind": "EVM"
+  }
+}
+```
+
+</CodeGroup>
+
+---
+
+## GET /v1/trades/:id/params
+
+Retrieve the order parameters for a trade. Use this to reconstruct the exact parameters needed to call the `OrderPortal` or `AdManager` contract independently.
+
+Requires authentication.
+
+### Path parameters
+
+<ParamField path="id" type="string" required>
+  UUID of the trade.
+</ParamField>
+
+### Response fields
+
+<ResponseField name="orderChainToken" type="string" required>
+  Token contract address on the order chain.
+</ResponseField>
+
+<ResponseField name="adChainToken" type="string" required>
+  Token contract address on the ad chain.
+</ResponseField>
+
+<ResponseField name="amount" type="string" required>
+  Trade amount in the smallest token unit.
+</ResponseField>
+
+<ResponseField name="bridger" type="string" required>
+  Bridger's address.
+</ResponseField>
+
+<ResponseField name="orderRecipient" type="string" required>
+  Address that receives tokens on the order chain.
+</ResponseField>
+
+<ResponseField name="adId" type="string" required>
+  The associated ad identifier.
+</ResponseField>
+
+<ResponseField name="adCreator" type="string" required>
+  Maker's address.
+</ResponseField>
+
+<ResponseField name="adRecipient" type="string" required>
+  Address that receives tokens on the ad chain.
+</ResponseField>
+
+<ResponseField name="salt" type="string" required>
+  Cryptographic salt for this order, used to prevent replay attacks.
+</ResponseField>
+
+<ResponseField name="orderChainId" type="string">
+  Chain ID of the order chain.
+</ResponseField>
+
+<ResponseField name="orderPortal" type="string">
+  Address of the `OrderPortal` contract on the order chain.
+</ResponseField>
+
+<ResponseField name="adChainId" type="string">
+  Chain ID of the ad chain.
+</ResponseField>
+
+<ResponseField name="adManager" type="string">
+  Address of the `AdManager` contract on the ad chain.
+</ResponseField>
+
+<CodeGroup>
+
+```json Response
+{
+  "orderChainToken": "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238",
+  "adChainToken": "0xA0b86a33E6441cD3b27CA2E60b05C5FBA3B6dE9B",
+  "amount": "500000000",
+  "bridger": "0x1A2B3C4D5E6F7A8B9C0D1E2F3A4B5C6D7E8F9A0B",
+  "orderRecipient": "0x1A2B3C4D5E6F7A8B9C0D1E2F3A4B5C6D7E8F9A0B",
+  "adId": "b693ab22-5e73-47e8-9937-1d4459b8c081",
+  "adCreator": "0x742d35Cc6634C0532925a3b844Bc454e4438f44e",
+  "adRecipient": "0x742d35Cc6634C0532925a3b844Bc454e4438f44e",
+  "salt": "7392841056",
+  "orderChainId": "11155111",
+  "orderPortal": "0xB2C3D4E5F60718293A4B5C6D7E8F9012345678AB",
+  "adChainId": "296",
+  "adManager": "0xA1B2C3D4E5F60718293A4B5C6D7E8F9012345678"
+}
+```
+
+</CodeGroup>
+
+---
+
+## POST /v1/trades/:id/lock
+
+Lock funds on the ad chain in response to a Bridger's deposit. This is a Maker action — only the Maker whose ad is associated with this trade can call this endpoint. Returns signed transaction data to submit to the `AdManager` contract.
+
+Requires authentication.
+
+### Path parameters
+
+<ParamField path="id" type="string" required>
+  UUID of the trade to lock.
+</ParamField>
+
+### Response fields
+
+<ResponseField name="chainId" type="string" required>
+  Chain ID of the `AdManager` contract.
+</ResponseField>
+
+<ResponseField name="contractAddress" type="string" required>
+  Address of the `AdManager` contract.
+</ResponseField>
+
+<ResponseField name="signature" type="string" required>
+  Relayer signature authorizing the lock.
+</ResponseField>
+
+<ResponseField name="authToken" type="string" required>
+  Authorization token to pass to the contract.
+</ResponseField>
+
+<ResponseField name="timeToExpire" type="number" required>
+  Seconds until this signed request expires.
+</ResponseField>
+
+<ResponseField name="orderParams" type="object" required>
+  Full `AdManager` order parameters for the lock transaction.
+</ResponseField>
+
+<ResponseField name="reqHash" type="string" required>
+  Hash of the relayer-signed request.
+</ResponseField>
+
+<ResponseField name="orderHash" type="string" required>
+  Hash of the order parameters.
+</ResponseField>
+
+<ResponseField name="chainKind" type="string" required>
+  `"EVM"` or `"STELLAR"`.
+</ResponseField>
+
+<CodeGroup>
+
+```json Response
+{
+  "chainId": "296",
+  "contractAddress": "0xA1B2C3D4E5F60718293A4B5C6D7E8F9012345678",
+  "signature": "0x2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c01",
+  "authToken": "0xb8c9d0e1f2a3b4c5d6e7f8091011121314151617",
+  "timeToExpire": 3600,
+  "orderParams": {
+    "orderChainToken": "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238",
+    "adChainToken": "0xA0b86a33E6441cD3b27CA2E60b05C5FBA3B6dE9B",
+    "amount": "500000000",
+    "bridger": "0x1A2B3C4D5E6F7A8B9C0D1E2F3A4B5C6D7E8F9A0B",
+    "orderChainId": "11155111",
+    "srcOrderPortal": "0xB2C3D4E5F60718293A4B5C6D7E8F9012345678AB",
+    "orderRecipient": "0x1A2B3C4D5E6F7A8B9C0D1E2F3A4B5C6D7E8F9A0B",
+    "adId": "b693ab22-5e73-47e8-9937-1d4459b8c081",
+    "adCreator": "0x742d35Cc6634C0532925a3b844Bc454e4438f44e",
+    "adRecipient": "0x742d35Cc6634C0532925a3b844Bc454e4438f44e",
+    "salt": "7392841056"
+  },
+  "reqHash": "0x8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d",
+  "orderHash": "0x0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0e1f",
+  "chainKind": "EVM"
+}
+```
+
+</CodeGroup>
+
+---
+
+## POST /v1/trades/:id/unlock
+
+Request unlock data to claim your locked funds after the trade is settled. Both the Bridger and the Maker call this endpoint on their respective chains. The response contains a zero-knowledge proof (`proof`), a nullifier hash, and signed contract data for either the `OrderPortal` (Bridger) or `AdManager` (Maker).
+
+Requires authentication.
+
+### Path parameters
+
+<ParamField path="id" type="string" required>
+  UUID of the trade to unlock.
+</ParamField>
+
+### Request body
+
+<ParamField body="signature" type="string" required>
+  Your wallet signature authorizing the unlock request. This prevents unauthorized parties from requesting unlock data on your behalf.
+</ParamField>
+
+### Response fields
+
+<ResponseField name="chainId" type="string" required>
+  Chain ID of the contract to call.
+</ResponseField>
+
+<ResponseField name="contractAddress" type="string" required>
+  Contract address to call for the unlock.
+</ResponseField>
+
+<ResponseField name="signature" type="string" required>
+  Relayer signature for the unlock transaction.
+</ResponseField>
+
+<ResponseField name="authToken" type="string" required>
+  Authorization token to pass to the contract.
+</ResponseField>
+
+<ResponseField name="timeToExpire" type="number" required>
+  Seconds until this signed request expires.
+</ResponseField>
+
+<ResponseField name="orderParams" type="object" required>
+  Order parameters for the unlock call.
+</ResponseField>
+
+<ResponseField name="nullifierHash" type="string" required>
+  Cryptographic nullifier preventing double-spend of this settlement.
+</ResponseField>
+
+<ResponseField name="targetRoot" type="string" required>
+  Merkle root used for deposit inclusion verification.
+</ResponseField>
+
+<ResponseField name="proof" type="string" required>
+  Serialized zero-knowledge proof attesting that the deposit is included in the on-chain Merkle tree.
+</ResponseField>
+
+<ResponseField name="orderHash" type="string" required>
+  Hash of the order parameters.
+</ResponseField>
+
+<ResponseField name="reqHash" type="string" required>
+  Hash of the relayer-signed request.
+</ResponseField>
+
+<ResponseField name="chainKind" type="string" required>
+  `"EVM"` or `"STELLAR"`.
+</ResponseField>
+
+<CodeGroup>
+
+```json Request
+{
+  "signature": "0x3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d01"
+}
+```
+
+```json Response
+{
+  "chainId": "11155111",
+  "contractAddress": "0xB2C3D4E5F60718293A4B5C6D7E8F9012345678AB",
+  "signature": "0x9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b01",
+  "authToken": "0xc9d0e1f2a3b4c5d6e7f8091011121314151617181920",
+  "timeToExpire": 3600,
+  "orderParams": {
+    "orderChainToken": "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238",
+    "adChainToken": "0xA0b86a33E6441cD3b27CA2E60b05C5FBA3B6dE9B",
+    "amount": "500000000",
+    "bridger": "0x1A2B3C4D5E6F7A8B9C0D1E2F3A4B5C6D7E8F9A0B",
+    "orderRecipient": "0x1A2B3C4D5E6F7A8B9C0D1E2F3A4B5C6D7E8F9A0B",
+    "adChainId": "296",
+    "adManager": "0xA1B2C3D4E5F60718293A4B5C6D7E8F9012345678",
+    "adId": "b693ab22-5e73-47e8-9937-1d4459b8c081",
+    "adCreator": "0x742d35Cc6634C0532925a3b844Bc454e4438f44e",
+    "adRecipient": "0x742d35Cc6634C0532925a3b844Bc454e4438f44e",
+    "salt": "7392841056"
+  },
+  "nullifierHash": "0xf1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2",
+  "targetRoot": "0xa3b4c5d6e7f8091011121314151617181920212223242526272829303132333435",
+  "proof": "0x1234567890abcdef...truncated",
+  "orderHash": "0x4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f",
+  "reqHash": "0x6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b",
+  "chainKind": "EVM"
+}
+```
+
+</CodeGroup>
+
+---
+
+## POST /v1/trades/:id/unlock/confirm
+
+Confirm that an unlock transaction has been submitted on-chain. Call this after successfully submitting the transaction data returned by `/unlock`.
+
+Requires authentication.
+
+### Path parameters
+
+<ParamField path="id" type="string" required>
+  UUID of the trade.
+</ParamField>
+
+### Request body
+
+<ParamField body="txHash" type="string" required>
+  Transaction hash of the on-chain unlock transaction.
+</ParamField>
+
+<ParamField body="signature" type="string">
+  Optional signature for the confirmation.
+</ParamField>
+
+### Response fields
+
+<ResponseField name="tradeId" type="string" required>
+  UUID of the trade.
+</ResponseField>
+
+<ResponseField name="success" type="boolean" required>
+  `true` when the relayer successfully recorded the confirmation.
+</ResponseField>
+
+<CodeGroup>
+
+```json Request
+{
+  "txHash": "0x7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c"
+}
+```
+
+```json Response
+{
+  "tradeId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+  "success": true
+}
+```
+
+</CodeGroup>
+
+---
+
+## POST /v1/trades/:id/confirm
+
+Confirm a general on-chain action for a trade (e.g., after the initial deposit transaction). Call this after any trade-related on-chain transaction that is not an unlock.
+
+Requires authentication.
+
+### Path parameters
+
+<ParamField path="id" type="string" required>
+  UUID of the trade.
+</ParamField>
+
+### Request body
+
+<ParamField body="txHash" type="string" required>
+  Transaction hash of the confirmed on-chain transaction.
+</ParamField>
+
+<ParamField body="signature" type="string">
+  Optional signature for the confirmation.
+</ParamField>
+
+### Response fields
+
+<ResponseField name="tradeId" type="string" required>
+  UUID of the trade.
+</ResponseField>
+
+<ResponseField name="success" type="boolean" required>
+  `true` when the relayer successfully recorded the confirmation.
+</ResponseField>
+
+<CodeGroup>
+
+```json Request
+{
+  "txHash": "0x9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0e"
+}
+```
+
+```json Response
+{
+  "tradeId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+  "success": true
+}
+```
+
+</CodeGroup>
+
+---
+
+## Trade object fields
+
+<ResponseField name="id" type="string" required>
+  UUID of the trade.
+</ResponseField>
+
+<ResponseField name="routeId" type="string" required>
+  UUID of the route this trade follows.
+</ResponseField>
+
+<ResponseField name="adId" type="string" required>
+  UUID of the ad this trade is placed against.
+</ResponseField>
+
+<ResponseField name="adCreatorAddress" type="string" required>
+  Blockchain address of the Maker.
+</ResponseField>
+
+<ResponseField name="adChainId" type="string" required>
+  Chain ID of the ad (source) chain.
+</ResponseField>
+
+<ResponseField name="orderChainId" type="string" required>
+  Chain ID of the order (destination) chain.
+</ResponseField>
+
+<ResponseField name="bridgerAddress" type="string" required>
+  Blockchain address of the Bridger.
+</ResponseField>
+
+<ResponseField name="amount" type="string" required>
+  Trade amount in the smallest token unit.
+</ResponseField>
+
+<ResponseField name="status" type="string" required>
+  Current trade status (e.g., `"PENDING"`, `"LOCKED"`, `"SETTLED"`).
+</ResponseField>
+
+<ResponseField name="adCreatorClaimed" type="boolean" required>
+  Whether the Maker has claimed their funds.
+</ResponseField>
+
+<ResponseField name="bridgerClaimed" type="boolean" required>
+  Whether the Bridger has claimed their funds.
+</ResponseField>
+
+<ResponseField name="createdAt" type="string" required>
+  ISO 8601 timestamp of trade creation.
+</ResponseField>
+
+<ResponseField name="updatedAt" type="string" required>
+  ISO 8601 timestamp of the last status update.
+</ResponseField>
+
+<ResponseField name="ad" type="object" required>
+  Summary of the associated ad: `id`, `routeId`, `creatorAddress`.
+</ResponseField>
+
+<ResponseField name="route" type="object" required>
+  Route details including `adToken` and `orderToken` with their chain information.
+</ResponseField>
