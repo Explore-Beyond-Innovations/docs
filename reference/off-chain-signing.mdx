@@ -1,0 +1,158 @@
+---
+title: "Off-chain signing: order digests and pre-auth requests"
+sidebarTitle: "Off-chain signing"
+description: "How to reproduce ProofBridge's on-chain order digest and pre-auth request hashes from JavaScript / TypeScript so your own tooling matches the contracts byte-for-byte."
+---
+
+Anything that signs on behalf of a bridger, ad creator, or the relayer
+has to produce bytes that match what the on-chain verifier expects —
+to the bit. This page is the integrator-facing recipe for two things:
+
+1. Reproducing the **Order EIP-712 digest** (used by
+   `OrderPortal.validateOrder`, `AdManager.validateOrder`, and
+   as a public input to the zk circuit).
+2. Building **pre-auth request hashes** for `createOrder`,
+   `unlockOrder`, `createAd`, `lockForOrder` (used by the relayer to
+   authorise calls off-chain before signing them with an admin key).
+
+The canonical reference implementations live in the monorepo:
+
+- **JS / TS** — `scripts/cross-chain-e2e/lib/signing.ts` and
+  `scripts/cross-chain-e2e/lib/proof.ts`.
+- **Fixtures / test vectors** —
+  `contracts/stellar/tests/fixtures/generate_fixtures.ts`.
+
+If you're building a custom signer or server, mirror those files — the
+Solidity (`contracts/evm/src/libraries/*.sol`) and Rust
+(`contracts/stellar/proofbridge-core`) sources are authoritative, and
+the two TS files port them slot-for-slot.
+
+## Reproducing the Order digest in TS
+
+The on-chain digest is EIP-712 over a 15-field tuple, with a
+deliberately minimal domain (see
+[Order hashing](/concepts/order-hashing) for the rationale). The byte
+layout of the struct hash is:
+
+```text
+keccak256(
+  ORDER_TYPEHASH                          // bytes32
+  ‖ orderChainToken                       // bytes32
+  ‖ adChainToken                          // bytes32
+  ‖ uint256(amount)                       // 32 bytes, big-endian
+  ‖ bridger                               // bytes32
+  ‖ uint256(orderChainId)                 // 32 bytes
+  ‖ orderPortal                           // bytes32
+  ‖ orderRecipient                        // bytes32
+  ‖ uint256(adChainId)                    // 32 bytes
+  ‖ adManager                             // bytes32
+  ‖ keccak256(bytes(adId))                // bytes32   (EIP-712 string hashing)
+  ‖ adCreator                             // bytes32
+  ‖ adRecipient                           // bytes32
+  ‖ uint256(salt)                         // 32 bytes
+  ‖ uint256(uint8(orderDecimals))         // 32 bytes, zero-padded
+  ‖ uint256(uint8(adDecimals))            // 32 bytes, zero-padded
+)
+```
+
+Note the two decimals fields at the end are `uint8` values *padded to
+32 bytes* — they're still word-aligned in the struct hash, just with
+24 leading zero bytes.
+
+The full digest is:
+
+```text
+keccak256(0x1901 ‖ domainSeparator ‖ structHash)
+```
+
+with `domainSeparator = keccak256(abi.encode(DOMAIN_TYPEHASH, keccak256("ProofBridge"), keccak256("1")))`.
+No `chainId` or `verifyingContract` in the domain — see
+[Order hashing](/concepts/order-hashing) for why.
+
+### Sanity check against a known vector
+
+`contracts/stellar/tests/fixtures/generate_fixtures.ts` produces a
+fixture whose digest is verified on both the EVM and Stellar test
+suites. If your TS implementation lands on the same
+`orderHash` for the same input, you're wire-compatible with both
+chains.
+
+## Pre-auth request hashes
+
+The relayer doesn't hand callers arbitrary signatures. Instead, each
+on-chain operation has a **pre-auth request** — an off-chain payload
+the relayer's admin key signs to authorise *this specific call by this
+specific user before this specific deadline*. On-chain, the portals
+recover the signer from the request hash and compare it to the
+registered admin address.
+
+The hash is uniform across all operations:
+
+```text
+keccak256(
+  authToken(32 bytes)           // opaque random nonce chosen by the relayer
+  ‖ time_to_expire(8 bytes BE)  // u64 deadline, seconds since epoch
+  ‖ keccak256(action)(32 bytes) // keccak of a fixed action string
+  ‖ params(variable)            // operation-specific packed fields
+  ‖ chain_id(16 bytes BE)       // u128, so it fits both EVM and Stellar chain ids
+  ‖ contract_address(32 bytes)  // target portal, bytes32-encoded
+)
+```
+
+Every operation uses the same outer shell — the only part that
+changes is `action` (a fixed string) and `params` (the packed
+operation-specific fields).
+
+### Action strings and params
+
+| Operation | `action` | `params` layout |
+|---|---|---|
+| `createOrder` | `"createOrder"` | `orderHash(32) ‖ nullifier(32) ‖ authToken-copy(32)` — the order hash itself is an input here, so the pre-auth binds to a specific order |
+| `unlockOrder` | `"unlockOrder"` | `orderHash(32) ‖ targetRoot(32) ‖ sideFlag(32, u256)` — binds to the root of the MMR that the proof was generated against, and which side is unlocking |
+| `createAd` | `"createAd"` | `adId_keccak(32) ‖ adCreator(32) ‖ adToken(32) ‖ adChainId(16 BE) ‖ uint256(adDecimals)(32)` |
+| `lockForOrder` | `"lockForOrder"` | `adId_keccak(32) ‖ orderHash(32) ‖ amount(32 BE) ‖ bridger(32)` |
+
+Canonical TS implementations for each live in
+`scripts/cross-chain-e2e/lib/signing.ts` under
+`hashCreateOrderRequest`, `hashUnlockOrderRequest`,
+`hashCreateAdRequest`, `hashLockForOrderRequest`.
+
+### Endianness is load-bearing
+
+Two details are easy to get wrong on the JS side:
+
+- `time_to_expire` (u64) is **big-endian, 8 bytes**.
+- `chain_id` (u128) is **big-endian, 16 bytes** — not a
+  `uint256`. This is so the same hash works on EVM (chain ids fit in
+  less than 16 bytes) and Stellar (which uses a locally-generated
+  u128 as its chain id).
+
+The helpers in `signing.ts` handle both. If you're writing your own
+and the contract rejects your signature, it's almost always one of
+these two — dump your packed bytes, compare slot-by-slot against the
+reference.
+
+## Running the reference off-chain signer
+
+The e2e harness in `scripts/cross-chain-e2e` is the simplest way to
+see the full flow end-to-end: it produces signed orders + pre-auth
+requests, submits them to a local docker stack, and asserts on-chain
+state converges. Follow [Run locally](/contribute/run-locally) to
+spin it up — the same functions it calls are what you'd import into a
+server of your own.
+
+## Public inputs to the zk circuit
+
+Once you have an order digest, the public-input vector the Noir
+circuit expects is:
+
+```text
+[ nullifier, orderHash % p, targetRoot, sideFlag ]
+```
+
+where `p` is the BN254 scalar field prime and `sideFlag` is `0` on
+the order chain and `1` on the ad chain. The `% p` reduction is
+essential — without it the value won't fit as a field element and the
+on-chain verifier will reject the proof even if everything else is
+right. See `scripts/cross-chain-e2e/lib/proof.ts` for the exact
+reduction used by the harness.

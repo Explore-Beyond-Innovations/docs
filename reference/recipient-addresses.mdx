@@ -1,0 +1,113 @@
+---
+title: "Recipient address invariants"
+sidebarTitle: "Recipient addresses"
+description: "Per-chain rules for how recipient addresses are encoded inside the Order tuple, and the errors raised when they're wrong."
+---
+
+The signed `Order` carries recipients as `bytes32` so the same struct
+works on both chains. But each chain still needs to derive a local
+recipient out of those 32 bytes — and the two chains have different
+rules for what a valid local address looks like. ProofBridge enforces
+those rules at `validateOrder` time, before any balance or signature
+work, so a malformed recipient fails fast and cheaply.
+
+This matters to any integrator generating signed orders off-chain (JS
+SDK, scripts, custom frontends): the encoding has to match the
+destination chain, or the transaction reverts before it can do
+anything useful.
+
+## EVM: upper 12 bytes must be zero
+
+Any `bytes32` that an EVM portal will cast to a local `address` — in
+particular `adRecipient` on `OrderPortal` and `orderRecipient` on
+`AdManager` — must be a left-padded 20-byte Ethereum address. The
+library helper is `AddressCast.assertEvmAddress` (in
+`contracts/evm/src/libraries/AddressCast.sol`):
+
+```text
+bytes32 raw = 0x0000000000000000000000001234...ABCD
+              └──── upper 12 bytes must be zero ────┘└──── 20-byte address ────┘
+```
+
+A value with junk in the upper 12 bytes reverts with:
+
+```solidity
+error AddressCast__NotEvmAddress(bytes32 value);
+```
+
+**Integrator encoding:** for a canonical EVM recipient
+`0x1234...ABCD`, the `bytes32` field is
+`0x0000000000000000000000001234...ABCD` — `abi.encode(address)` or
+`bytes32(uint256(uint160(addr)))` both produce this layout.
+
+### Why this check exists
+
+Without it, Solidity's `address(uint160(uint256(b)))` silently drops
+the upper 12 bytes. A signer that accidentally stuffs a chain-specific
+identifier into those bytes (e.g. padding with a Stellar pubkey
+prefix) would see the transaction succeed but send funds to an
+unexpected short address. The upper-bytes check makes that class of
+error a hard revert instead of silent misdelivery.
+
+## Stellar: must decode to a `G...` account
+
+On Stellar, the local recipients — `ad_recipient` on `order-portal`,
+`order_recipient` on `ad-manager` — must decode to a Stellar
+**account** address (Ed25519 pubkey, encoded as a `G...` strkey). The
+primitive is `bytes32_to_account_address` in
+`proofbridge-core::token`, which treats the 32 bytes as a raw Ed25519
+pubkey and re-encodes it.
+
+Soroban **contract** addresses (`C...` strkeys) are intentionally not
+accepted as recipients. Contract addresses don't come from an Ed25519
+pubkey and can't round-trip through this primitive, which keeps the
+recipient surface narrow and predictable — funds always land with a
+real account, never with an unknown contract.
+
+All-zero input is rejected explicitly (`RecipientZero` /
+`InvalidAdRecipient`) to prevent a forgotten-field bug from sending
+funds into the black hole.
+
+**Integrator encoding:** for a Stellar recipient
+`GABC...XYZ`, the `bytes32` field is the raw 32-byte Ed25519 public
+key extracted from the strkey — **not** left-padded, **not**
+prefix-tagged. Most Stellar SDKs expose this as `rawPublicKey()` or
+similar on the `Keypair`.
+
+## Error surface
+
+### EVM
+
+| Error | Raised by | Meaning |
+|---|---|---|
+| `AddressCast__NotEvmAddress(bytes32)` | `AddressCast.assertEvmAddress` | Upper 12 bytes of the `bytes32` are non-zero |
+
+### Stellar
+
+| Error | Raised by | Meaning |
+|---|---|---|
+| `InvalidAdRecipient` | `order-portal::validate_order` | Zero-bytes input passed as `ad_recipient` |
+| `RecipientZero` | `ad-manager::validate_order` | Zero-bytes input passed as `order_recipient` |
+| `InvalidAccountAddress` | `proofbridge-core::token::bytes32_to_account_address` | 32 bytes don't decode to a valid Ed25519 pubkey |
+
+## Integrator impact
+
+- **Same `bytes32` field, different encodings.** When you build an
+  order, the `bridger` / `orderRecipient` / `adRecipient` /
+  `adCreator` fields are all `bytes32`, but the encoding depends on
+  the chain the field refers to:
+  - `bridger` + `orderRecipient` — encoded for the **order chain**.
+  - `adCreator` + `adRecipient` — encoded for the **ad chain**.
+- **Fail early, not mid-settlement.** All recipient checks happen
+  inside `validateOrder`, which is the first thing both portals do
+  before any state change. Wrong encoding costs you gas but never
+  partial settlement.
+- **UIs should validate on input.** Catching a malformed recipient at
+  form-time is much cheaper than a failed on-chain call. The
+  frontend's order form enforces chain-appropriate address validation
+  before letting the user submit.
+
+See [Off-chain signing](/reference/off-chain-signing) for worked
+examples of building recipient `bytes32`s for both chains, and the
+`AddressCast` library (`contracts/evm/src/libraries/AddressCast.sol`)
+for the canonical Solidity helper.

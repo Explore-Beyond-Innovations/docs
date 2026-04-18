@@ -7,19 +7,23 @@ description: "Step-by-step guide to making a cross-chain transfer as a Bridger: 
 Bridging tokens on ProofBridge means transferring assets from one blockchain to another through a peer-to-peer match with a liquidity provider (Maker). You deposit your source-chain tokens into the OrderPortal contract, the Maker locks their destination-chain tokens against your order, and a zero-knowledge proof settles both sides trustlessly. The entire process typically completes within a few minutes.
 
 <Note>
-  ProofBridge currently operates on testnet (Ethereum Sepolia and Stellar Testnet). Use testnet funds only. Get Sepolia ETH from a public faucet and Stellar Testnet XLM from [friendbot](https://friendbot.stellar.org/).
+  ProofBridge currently operates on testnet (Ethereum Sepolia and Stellar Testnet). Use testnet funds only. You need two kinds of testnet funds:
+
+  1. **Gas** — Sepolia ETH from a public faucet, Stellar Testnet XLM from [friendbot](https://friendbot.stellar.org/).
+  2. **Bridge tokens** — the ERC-20 / SAC / SEP-41 tokens you'll actually send. Claim them from the in-app [Faucet](https://app.pfbridge.xyz/faucet) after connecting your wallet; it lists every bridgeable token on each supported chain.
 </Note>
 
 ## Prerequisites
 
 - A connected and authenticated wallet on the source chain. See [Connect your wallet](/guides/connect-wallet).
-- Sufficient testnet funds on the source chain to cover the transfer amount.
+- Sufficient gas on the source chain to cover the transaction.
+- Testnet tokens to bridge — claim them from the in-app [Faucet](https://app.pfbridge.xyz/faucet) if you don't already hold any.
 
 ## Bridge your tokens
 
 <Steps>
   <Step title="Connect your wallet on the source chain">
-    Open [ProofBridge](https://proof-bridge.vercel.app) and connect your wallet to the source chain (the network where you currently hold tokens). If you are not yet connected, follow the [connect wallet guide](/guides/connect-wallet).
+    Open [ProofBridge](https://app.pfbridge.xyz) and connect your wallet to the source chain (the network where you currently hold tokens). If you are not yet connected, follow the [connect wallet guide](/guides/connect-wallet).
 
     Make sure your wallet is set to the correct network — for example, Ethereum Sepolia if you are sending ETH.
   </Step>

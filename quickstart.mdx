@@ -11,7 +11,8 @@ This guide walks you through making your first cross-chain transfer on ProofBrid
 Before you start, make sure you have:
 
 - **A compatible wallet.** MetaMask (or any EIP-1193-compatible browser extension) for Sepolia, or a Stellar wallet (Freighter, xBull, Albedo) for Stellar Testnet.
-- **Testnet funds.** You need either Sepolia ETH or Stellar Testnet XLM to cover the deposit and gas. Get Sepolia ETH from a public faucet, or Stellar Testnet XLM from [friendbot](https://friendbot.stellar.org/).
+- **Testnet gas.** You need Sepolia ETH (for EVM) or Stellar Testnet XLM (for Soroban) to cover transaction fees. Get Sepolia ETH from a public faucet, or Stellar Testnet XLM from [friendbot](https://friendbot.stellar.org/).
+- **Testnet bridge tokens.** After you connect your wallet, open the in-app [Faucet](https://app.pfbridge.xyz/faucet) to claim the ERC-20 / SAC / SEP-41 tokens that ProofBridge currently supports. These are the tokens you'll actually move between chains — XLM and native ETH aren't bridgeable on their own.
 - **A modern browser.** The ProofBridge web app works in any browser that supports wallet extensions.
 
 <Note>
@@ -22,7 +23,7 @@ Before you start, make sure you have:
 
 <Steps>
   <Step title="Open the ProofBridge app">
-    Navigate to [https://proof-bridge.vercel.app/](https://proof-bridge.vercel.app/) in your browser.
+    Navigate to [https://app.pfbridge.xyz/](https://app.pfbridge.xyz/) in your browser.
 
     You will see the bridge marketplace showing available liquidity ads from Makers. Each ad lists the route, available amount, and exchange rate.
   </Step>

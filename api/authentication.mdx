@@ -95,8 +95,8 @@ Request a nonce challenge for your wallet address. The returned value is the mes
   "address": "0x742d35Cc6634C0532925a3b844Bc454e4438f44e",
   "expiresAt": "2026-04-15T12:05:00.000Z",
   "nonce": "a3f9b2c1d4e5f607",
-  "domain": "proof-bridge.vercel.app",
-  "uri": "https://proof-bridge.vercel.app"
+  "domain": "app.pfbridge.xyz",
+  "uri": "https://app.pfbridge.xyz"
 }
 ```
 
@@ -155,7 +155,7 @@ Submit your signed challenge to receive JWT tokens. The request body differs sli
 ```json Request (EVM)
 {
   "chainKind": "EVM",
-  "message": "proof-bridge.vercel.app wants you to sign in with your Ethereum account:\n0x742d35Cc6634C0532925a3b844Bc454e4438f44e\n\nSign in to ProofBridge\n\nURI: https://proof-bridge.vercel.app\nVersion: 1\nChain ID: 1\nNonce: a3f9b2c1d4e5f607\nIssued At: 2026-04-15T12:00:00.000Z",
+  "message": "app.pfbridge.xyz wants you to sign in with your Ethereum account:\n0x742d35Cc6634C0532925a3b844Bc454e4438f44e\n\nSign in to ProofBridge\n\nURI: https://app.pfbridge.xyz\nVersion: 1\nChain ID: 1\nNonce: a3f9b2c1d4e5f607\nIssued At: 2026-04-15T12:00:00.000Z",
   "signature": "0x4d2a1c3e5f6b7a8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d01"
 }
 ```
@@ -221,6 +221,42 @@ Exchange a valid refresh token for a new access token. Use this when your access
 
 ---
 
+## POST /v1/auth/link
+
+Attach a second wallet (on the other chain kind) to the currently
+authenticated session. Used for the dual-chain sign-in flow described in
+[Connect your wallet](/guides/connect-wallet#link-a-second-wallet-to-your-account).
+
+The call takes the same signed-challenge payload as `/v1/auth/login`
+but runs against the existing user instead of creating or looking up
+one by address. On success, the wallet is recorded on the caller's
+`User` record and no new session is issued — the caller's current
+access token keeps working.
+
+<ParamField header="Authorization" type="string" required>
+  `Bearer <accessToken>` — the session token from the wallet that is
+  already signed in.
+</ParamField>
+
+### Request body
+
+Identical to `POST /v1/auth/login`:
+
+- EVM: `{ "message": "...", "signature": "0x...", "chainKind": "EVM" }`
+- Stellar: `{ "transaction": "<signed-XDR>", "chainKind": "STELLAR" }`
+
+### Behaviour
+
+- The `chainKind` must be the one **not** currently linked to the
+  account. Re-linking the same chain kind returns `409 Conflict`.
+- Linking an address that already belongs to a different account
+  returns `409 Conflict` — disconnect it from the other account first.
+- On success, returns the updated user record. No new tokens are
+  issued; the existing access / refresh tokens continue to work and
+  now represent both wallets.
+
+---
+
 ## JavaScript example: full authentication flow
 
 The following example shows the complete EVM authentication flow using `ethers.js` and the Fetch API.
@@ -229,7 +265,7 @@ The following example shows the complete EVM authentication flow using `ethers.j
 import { ethers } from "ethers";
 
 async function authenticate(walletAddress) {
-  const BASE_URL = "https://api.proof-bridge.vercel.app";
+  const BASE_URL = "https://api.pfbridge.xyz";
 
   // Step 1: Request a challenge
   const challengeRes = await fetch(`${BASE_URL}/v1/auth/challenge`, {
@@ -265,7 +301,7 @@ async function authenticate(walletAddress) {
 
 // Step 5: Refresh when the access token expires
 async function refreshTokens() {
-  const BASE_URL = "https://api.proof-bridge.vercel.app";
+  const BASE_URL = "https://api.pfbridge.xyz";
   const refresh = localStorage.getItem("pb_refresh");
 
   const res = await fetch(`${BASE_URL}/v1/auth/refresh`, {

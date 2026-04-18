@@ -13,19 +13,23 @@ This guide walks you through creating your first liquidity ad and explains how t
 When a transfer settles, the OrderPortal releases the Bridger's deposited source-chain tokens to a recipient address you specify — your "ad recipient." Your destination-chain tokens are released to the Bridger's recipient. You set the terms when you create the ad, so you control the rate at which you are willing to exchange.
 
 <Note>
-  ProofBridge is live on testnet. All funds involved are testnet tokens with no real-world value. Get Sepolia ETH from a public faucet and Stellar Testnet XLM from [friendbot](https://friendbot.stellar.org/).
+  ProofBridge is live on testnet. All funds involved are testnet tokens with no real-world value.
+
+  - **Gas** — Sepolia ETH from a public faucet, Stellar Testnet XLM from [friendbot](https://friendbot.stellar.org/).
+  - **Liquidity** — fund the ad with bridgeable tokens (ERC-20 / SAC / SEP-41). Claim them from the in-app [Faucet](https://app.pfbridge.xyz/faucet) if you don't already hold any.
 </Note>
 
 ## Prerequisites
 
 - A connected wallet on the **destination chain** (the chain where you hold the tokens you want to offer). See [Connect your wallet](/guides/connect-wallet).
-- Sufficient testnet tokens to fund the ad.
+- Sufficient gas to cover the funding transaction.
+- Testnet tokens to fund the ad — claim them from the in-app [Faucet](https://app.pfbridge.xyz/faucet) if needed.
 
 ## Create a liquidity ad
 
 <Steps>
   <Step title="Connect your wallet on the destination chain">
-    Open [ProofBridge](https://proof-bridge.vercel.app) and connect your wallet to the chain where you hold the tokens you want to provide. For example, if you want to offer XLM to Bridgers coming from Ethereum Sepolia, connect your Stellar wallet.
+    Open [ProofBridge](https://app.pfbridge.xyz) and connect your wallet to the chain where you hold the tokens you want to provide. For example, if you want to offer XLM to Bridgers coming from Ethereum Sepolia, connect your Stellar wallet.
   </Step>
 
   <Step title="Navigate to Ads Management">

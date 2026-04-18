@@ -24,6 +24,28 @@ A single command brings up:
 
 That is the baseline. You can optionally install the full toolchain (Foundry, Rust/Soroban, Noir/`bb`) if you want to build contracts from source — see [Using a local build](#using-a-local-build) below.
 
+### Compiler versions
+
+If you're building contracts locally (not just consuming the prebuilt
+bundle), the EVM side requires **Solidity `^0.8.34`**. The minimum
+bump is deliberate — the concrete contracts use
+`ReentrancyGuardTransient`, which needs transient storage opcodes
+introduced in 0.8.24 and stabilised in later patch releases.
+
+- **Foundry** — `foundryup` fetches the matching solc via `svm` the
+  first time you run `forge build`. No manual install needed.
+- **CI** — if you're replicating the GitHub Actions matrix, the
+  `foundry-toolchain@v1` action **must** be pinned to
+  `version: stable`. The default (`nightly`) ships an svm-rs
+  compiler list that doesn't know about 0.8.34 yet and fails with:
+
+  ```
+  No solc version exists that matches the version requirement: ^0.8.34
+  ```
+
+  Pinning to `stable` is the difference between a green build and that
+  error.
+
 ## The one-command flow
 
 ```bash

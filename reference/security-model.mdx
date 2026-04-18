@@ -21,8 +21,13 @@ When you create an order, the full set of trade terms — source chain, destinat
 This signature binds your order to exactly one set of contracts on exactly two chains. The same signed message cannot be submitted to a different chain or a different contract version without invalidating the signature. This prevents **cross-chain replay attacks** and **cross-contract replay attacks** even without including `chainId` in the EIP-712 domain, because both chain IDs and both contract addresses are explicit fields in the Order struct itself.
 
 <Note>
-  The EIP-712 domain for ProofBridge uses `name = "Proofbridge"` and `version = "1"`. Chain IDs and contract addresses are part of the Order struct, not the domain — making every field inspectable in your wallet's signing prompt.
+  The EIP-712 domain for ProofBridge uses `name = "Proofbridge"` and `version = "1"`. Chain IDs and contract addresses are part of the Order struct, not the domain — making every field inspectable in your wallet's signing prompt, **and** making the digest byte-identical on both chains so a single zk proof can settle atomically. See [Order hashing](/concepts/order-hashing) for the full rationale.
 </Note>
+
+Two additional invariants are enforced at `validateOrder` time on each chain:
+
+- **Decimals are signed, not inferred.** The `orderDecimals` and `adDecimals` fields are part of the EIP-712 struct, so a signer commits to the exact scaling. Each portal also asserts that its local token's `decimals()` matches what was signed — defence in depth against a mismatched or redeployed token. See [Decimal scaling](/concepts/decimal-scaling).
+- **Recipients are chain-shape-checked.** An EVM portal rejects a `bytes32` recipient with non-zero upper 12 bytes; a Stellar portal rejects a non-decodable Ed25519 pubkey or a Soroban contract address. A misencoded recipient fails cheaply before any state change. See [Recipient address invariants](/reference/recipient-addresses).
 
 ---
 

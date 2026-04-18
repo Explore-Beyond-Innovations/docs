@@ -7,7 +7,10 @@ description: "Connect an EVM wallet (MetaMask or WalletConnect) or a Stellar wal
 Before you can bridge tokens or provide liquidity, you need to connect a wallet. ProofBridge supports EVM-compatible wallets (such as MetaMask) for Ethereum Sepolia, and Stellar-native wallets (Freighter, xBull, Albedo) for Stellar Testnet. Authentication uses Sign-In With Ethereum (SIWE) for EVM wallets and SEP-10 challenge signing for Stellar wallets — you sign a message to prove wallet ownership, not a transaction, so no gas is spent during login.
 
 <Note>
-  ProofBridge is live on testnet. Make sure your wallet has testnet funds before connecting. Get Sepolia ETH from a public faucet and Stellar Testnet XLM from [friendbot](https://friendbot.stellar.org/).
+  ProofBridge is live on testnet. You'll want testnet funds before or shortly after connecting:
+
+  - **Gas** — Sepolia ETH from a public faucet, Stellar Testnet XLM from [friendbot](https://friendbot.stellar.org/).
+  - **Bridge tokens** — after connecting, open the in-app [Faucet](https://app.pfbridge.xyz/faucet) to claim the ERC-20 / SAC / SEP-41 tokens that ProofBridge currently supports.
 </Note>
 
 ## Prerequisites
@@ -21,7 +24,7 @@ Before you can bridge tokens or provide liquidity, you need to connect a wallet.
 
     <Steps>
       <Step title="Open ProofBridge">
-        Navigate to [https://proof-bridge.vercel.app](https://proof-bridge.vercel.app) in your browser.
+        Navigate to [https://app.pfbridge.xyz](https://app.pfbridge.xyz) in your browser.
       </Step>
 
       <Step title="Click Connect wallet">
@@ -63,7 +66,7 @@ Before you can bridge tokens or provide liquidity, you need to connect a wallet.
 
     <Steps>
       <Step title="Open ProofBridge">
-        Navigate to [https://proof-bridge.vercel.app](https://proof-bridge.vercel.app) in your browser.
+        Navigate to [https://app.pfbridge.xyz](https://app.pfbridge.xyz) in your browser.
       </Step>
 
       <Step title="Click Connect wallet">
@@ -101,6 +104,48 @@ When you sign the authentication message, the ProofBridge relayer verifies your 
   Never share your wallet's seed phrase or private key with anyone. ProofBridge will never ask for these. The only action required from you is signing a plain-text message in your wallet.
 </Warning>
 
+## Link a second wallet to your account
+
+ProofBridge accounts support **one wallet per chain kind** — one EVM wallet and one Stellar wallet attached to the same session. This lets a bridger fund an order on EVM and settle directly into a Stellar address they control, without signing out and back in as a different user.
+
+The flow after your first sign-in:
+
+<Steps>
+  <Step title="Open the connection hub">
+    Click your connected address in the header, then **Link another wallet** (or open the wallet icon in any flow that needs the other chain — the app will prompt you to link if the required chain isn't attached yet).
+  </Step>
+  <Step title="Choose the chain you want to add">
+    The modal shows only the chain kind you haven't linked yet. If you signed in with MetaMask, you'll be offered a Stellar wallet; if you signed in with Freighter, you'll be offered EVM.
+  </Step>
+  <Step title="Sign the link challenge">
+    Same authentication flow as first sign-in — SIWE for EVM, SEP-10 for Stellar — but the signed response is posted to `POST /v1/auth/link` instead of `POST /v1/auth/login`. The relayer associates the newly-verified address with your existing account.
+  </Step>
+  <Step title="Both wallets are now attached">
+    Your header shows both addresses. Actions that need the EVM side (EVM deposits, MetaMask signatures) use your EVM wallet; actions that need the Stellar side (Soroban calls, SEP-41 approvals) use Freighter. Each chain's wallet is used per-action — nothing is re-signed just to switch chains.
+  </Step>
+</Steps>
+
+<Note>
+  A single address can only be linked to one ProofBridge account at a time. If the wallet you're trying to link was previously attached to a different account, the link fails with a clear error — disconnect it from the other account first.
+</Note>
+
+### What being linked enables
+
+- **Cross-chain flows in one session.** Create an order on EVM and receive on Stellar (or the reverse) without signing out and back in.
+- **Per-chain address resolution.** Backend callbacks can derive your Stellar recipient from your session when you're signing an EVM action, and vice versa.
+- **No re-auth between actions.** The JWT issued at login covers every linked wallet for that session; signatures are only asked for when a specific on-chain or pre-auth action needs them.
+
+### Swapping a linked wallet
+
+Linking is stable but not permanent. To replace a linked wallet with a different one on the same chain kind:
+
+1. Disconnect the current wallet on that chain kind (from the connection hub).
+2. Re-run the link flow with the new wallet.
+
+The prior link is dropped as soon as the new one succeeds.
+
 ## Disconnect your wallet
 
 To end your session, click your wallet address in the top-right corner and select **Disconnect**. This clears your local session tokens. Your on-chain funds and positions are unaffected.
+
+If you only want to drop one of two linked wallets (and keep the other active), use **Disconnect this chain** from the connection hub instead of the session-wide **Disconnect**.

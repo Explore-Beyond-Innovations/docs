@@ -1,0 +1,117 @@
+---
+title: "Get testnet tokens from the ProofBridge faucet"
+sidebarTitle: "Faucet"
+description: "Claim ERC-20 / SAC / SEP-41 test tokens directly in the ProofBridge app, per chain, for bridging and liquidity provision."
+---
+
+ProofBridge runs on public testnets, and you need two different kinds of
+testnet funds to use it:
+
+1. **Gas** — the native asset of each chain (Sepolia ETH on EVM,
+   Stellar Testnet XLM on Soroban). These come from the chain's
+   built-in faucets, not from ProofBridge.
+2. **Bridge tokens** — the ERC-20, SAC, and SEP-41 tokens that
+   ProofBridge actually moves between chains. These come from the
+   in-app **Faucet** page.
+
+This page covers the in-app faucet. For gas, the standard public
+faucets are linked below.
+
+## Open the faucet
+
+After signing in, navigate to [**Faucet**](https://app.pfbridge.xyz/faucet)
+in the app (also reachable from the sidebar). The page lists every
+supported chain and, under each chain, the bridgeable tokens you can
+claim on that chain.
+
+<Note>
+  The faucet page only shows tokens you can actually bridge. Native
+  gas assets (ETH, XLM) are intentionally omitted because they're not
+  bridgeable on their own — you wrap them to ERC-20 / SAC form as part
+  of a bridge order. Fund gas separately via the public faucets listed
+  below.
+</Note>
+
+## Claim a token
+
+<Steps>
+  <Step title="Connect the wallet on the target chain">
+    Each token is claimed on a specific chain. You must be connected
+    and authenticated on that chain first — EVM wallets for Sepolia
+    tokens, a Stellar wallet for Stellar-side tokens. See
+    [Connect your wallet](/guides/connect-wallet).
+
+    If you have both chains linked to the same account (see
+    [Link a second wallet](/guides/connect-wallet#link-a-second-wallet-to-your-account)),
+    the faucet can claim on either side without re-signing.
+  </Step>
+  <Step title="Find the token under its chain">
+    Scroll to the chain card for the token you need. Tokens with the
+    **Claim** button are faucetable. Tokens without one (native XLM,
+    native ETH) aren't — use the external gas faucets instead.
+  </Step>
+  <Step title="Click Claim">
+    Hit **Claim**. The app calls `POST /v1/faucet/request` on the
+    relayer, which mints the token on your linked wallet's address for
+    that chain. No wallet signature is required — the relayer's own
+    admin key mints on testnet.
+  </Step>
+  <Step title="Wait for the tx to confirm">
+    EVM claims land in one block (a few seconds on Sepolia). Stellar
+    claims land in one ledger (~5 seconds). Your wallet balance
+    updates automatically once the transaction is confirmed.
+  </Step>
+  <Step title="(Optional) Add the token to your wallet">
+    Click the wallet icon next to a token to register it in your
+    connected wallet so the balance is visible natively:
+
+    - **MetaMask** — uses `wallet_watchAsset` (ERC-20 add-token
+      dialog).
+    - **Freighter** — uses Freighter's `addToken` API for SAC and
+      SEP-41 tokens. If Freighter times out, the app copies the
+      contract id to your clipboard so you can paste it into
+      Freighter's "Add asset" search.
+  </Step>
+</Steps>
+
+## Limits
+
+ProofBridge's faucet enforces one hard limit per user, per token:
+
+> You can't claim a token if your wallet already holds **more than ~100,000 units** of it (measured in the token's raw base units).
+
+In practice this means you can always top up when you're low, but
+repeated claims to stockpile are blocked. If you're hit with
+`Balance threshold exceeded` in the toast, spend or bridge some of
+what you already hold and try again.
+
+There is no explicit time-based cooldown at the moment. The balance
+threshold acts as the rate limiter.
+
+## When the faucet doesn't give you what you need
+
+| You need… | Use… |
+|---|---|
+| Sepolia ETH for gas | A public Sepolia faucet (Alchemy, Infura, QuickNode, Chainlink). Requires a small mainnet balance or GitHub login. |
+| Stellar Testnet XLM for gas | [friendbot](https://friendbot.stellar.org/) — instant, unlimited, no sign-up. |
+| Bridgeable ERC-20 / SAC / SEP-41 | The in-app [Faucet](https://app.pfbridge.xyz/faucet). |
+| Mainnet tokens | Not supported. ProofBridge is testnet-only today. |
+
+If the in-app faucet is failing for a token (error banner, nothing
+arrives after a minute), the most likely cause is the relayer's mint
+signer running low on the chain's native gas. Reach out via the
+[GitHub repository](https://github.com/Explore-Beyond-Innovations/ProofBridge)
+and we'll top it up.
+
+## Where to go next
+
+Once you have both gas **and** the bridge tokens you want to move:
+
+<CardGroup cols={2}>
+  <Card title="Bridge your first tokens" icon="arrow-right-arrow-left" href="/guides/bridge-tokens">
+    Use the tokens you just claimed to complete a cross-chain transfer.
+  </Card>
+  <Card title="Provide liquidity" icon="hand-holding-dollar" href="/guides/provide-liquidity">
+    Fund an ad with those tokens to match orders from other bridgers.
+  </Card>
+</CardGroup>

@@ -6,7 +6,7 @@
     "light": "https://media.brand.dev/01d04b17-1525-498f-a261-b4fbd27e1404.svg",
     "dark": "https://media.brand.dev/01d04b17-1525-498f-a261-b4fbd27e1404.svg"
   },
-  "favicon": "https://icons.duckduckgo.com/ip3/proof-bridge.vercel.app.ico",
+  "favicon": "/favicon.ico",
   "colors": {
     "primary": "#6366f1",
     "light": "#a5b4fc",
@@ -45,6 +45,8 @@
               "concepts/liquidity-ads",
               "concepts/zero-knowledge-proofs",
               "concepts/merkle-mountain-range",
+              "concepts/order-hashing",
+              "concepts/decimal-scaling",
               "concepts/supported-networks",
               "concepts/comparisons"
             ]
@@ -53,6 +55,7 @@
             "group": "Guides",
             "pages": [
               "guides/connect-wallet",
+              "guides/faucet",
               "guides/bridge-tokens",
               "guides/provide-liquidity",
               "guides/manage-ads",
@@ -69,6 +72,8 @@
             "group": "Reference",
             "pages": [
               "reference/smart-contracts",
+              "reference/recipient-addresses",
+              "reference/off-chain-signing",
               "reference/security-model",
               "reference/roadmap",
               "reference/faq"

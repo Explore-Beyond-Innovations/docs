@@ -1,0 +1,102 @@
+---
+title: "The canonical Order tuple and cross-chain digest"
+sidebarTitle: "Order hashing"
+description: "ProofBridge uses a single EIP-712 Order tuple across EVM and Stellar so both chains compute the same digest by construction."
+---
+
+ProofBridge's correctness story rests on one small, load-bearing fact:
+**the on-chain order digest is the same byte string on EVM and on
+Stellar**. That property is what lets a proof that binds an `orderHash`
+on one chain be verified on the other. To hold, both sides have to hash
+the exact same struct in the exact same way — and they do.
+
+## One tuple, two chains
+
+There is a single canonical 15-field `Order` tuple. Both chains build it
+from their own direction-specific `OrderParams` plus the local context
+they have (chain id, contract address) before hashing. The digest is
+equal across chains **by construction**, not by parallel maintenance of
+two hashers that happen to match.
+
+| Slot | Field | Type |
+|---|---|---|
+| 1 | `orderChainToken` | `bytes32` |
+| 2 | `adChainToken` | `bytes32` |
+| 3 | `amount` | `uint256` (order-chain raw units) |
+| 4 | `bridger` | `bytes32` |
+| 5 | `orderChainId` | `uint256` |
+| 6 | `orderPortal` | `bytes32` |
+| 7 | `orderRecipient` | `bytes32` |
+| 8 | `adChainId` | `uint256` |
+| 9 | `adManager` | `bytes32` |
+| 10 | `adId` | `string` (hashed to `bytes32` via keccak256) |
+| 11 | `adCreator` | `bytes32` |
+| 12 | `adRecipient` | `bytes32` |
+| 13 | `salt` | `uint256` |
+| 14 | `orderDecimals` | `uint8` (padded to 32 bytes) |
+| 15 | `adDecimals` | `uint8` (padded to 32 bytes) |
+
+## Typehash
+
+```text
+Order(
+  bytes32 orderChainToken, bytes32 adChainToken, uint256 amount,
+  bytes32 bridger,
+  uint256 orderChainId, bytes32 orderPortal, bytes32 orderRecipient,
+  uint256 adChainId, bytes32 adManager,
+  string adId, bytes32 adCreator, bytes32 adRecipient,
+  uint256 salt,
+  uint8 orderDecimals, uint8 adDecimals
+)
+```
+
+`adId` participates in the hash as a string member per EIP-712 — it's
+hashed with `keccak256` before being concatenated into the struct hash.
+`orderDecimals` and `adDecimals` are the two trailing scaling fields
+described in [Decimal scaling](/concepts/decimal-scaling).
+
+## Minimal domain, on purpose
+
+The EIP-712 domain is intentionally minimal:
+
+```json
+{ "name": "ProofBridge", "version": "1" }
+```
+
+No `chainId` and no `verifyingContract` in the domain. Chain ids and
+contract addresses live **inside** the struct instead (slots 5–6, 8–9),
+which means the exact same digest is accepted on either chain without a
+domain-separator mismatch. A chain-specific `verifyingContract` would
+split the digest in two and break the cross-chain invariant.
+
+Because chain ids and contracts live inside the struct, they're still
+signed — a replay to the wrong chain or wrong portal fails at
+`validateOrder`, not at signature recovery.
+
+## How the two sides build it
+
+- **OrderPortal** (order chain) takes its `OrderParams` and fills in the
+  local `orderChainId` + `orderPortal` from `block.chainid` and
+  `address(this)`. The remaining fields — notably `adChainId`,
+  `adManager`, `adCreator`, `adRecipient` — come from the signed
+  payload.
+- **AdManager** (ad chain) does the mirror image: fills in `adChainId`
+  and `adManager` from its own local context, trusts the signed
+  `orderChainId`, `orderPortal`, `bridger`, `orderRecipient` from the
+  payload.
+
+Both converge on the same 15-slot tuple. On EVM the implementation is
+the `OrderHash` library (`contracts/evm/src/libraries/OrderHash.sol`);
+on Stellar it's `proofbridge-core::eip712`. See
+[Off-chain signing](/reference/off-chain-signing) for the JS/TS recipe
+that reproduces the digest bit-for-bit off-chain.
+
+## Why this matters for proofs
+
+The zk circuit's public inputs include the order hash modulo the BN254
+prime — `[nullifier, orderHash % p, targetRoot, sideFlag]`. If the two
+chains computed different digests for "the same" order, the public
+inputs would diverge and no single proof could satisfy both sides. The
+cross-chain digest invariant is what makes a single proof usable on
+both chains, which is what makes atomic settlement possible without a
+trusted relayer.

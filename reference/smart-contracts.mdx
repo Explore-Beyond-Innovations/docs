@@ -126,13 +126,13 @@ The domain separator uses:
 - **Name**: `Proofbridge`
 - **Version**: `1`
 
-The chain ID and contract addresses are explicit fields in the struct itself, rather than in the domain, ensuring every field is visible and auditable.
+The chain ID and contract addresses are explicit fields in the struct itself, rather than in the domain, ensuring every field is visible and auditable — and critically, ensuring both chains produce the **same digest** for the same order. See [Order hashing](/concepts/order-hashing) for the full treatment.
 
 ```text
 Order {
   orderChainToken     // token you are depositing (source chain)
   adChainToken        // token you will receive (destination chain)
-  amount              // transfer amount
+  amount              // transfer amount, in order-chain raw units
   bridger             // your address as the Bridger
   orderChainId        // source chain ID
   orderPortal         // OrderPortal contract address on the source chain
@@ -143,9 +143,17 @@ Order {
   adCreator           // Maker's address
   adRecipient         // address to receive funds on the destination chain (your payout)
   salt                // caller-controlled nonce to prevent duplicate orders
+  orderDecimals       // uint8 — decimals of the order-chain token (see Decimal scaling)
+  adDecimals          // uint8 — decimals of the ad-chain token
 }
 ```
 
 <Warning>
   Never reuse a `salt` value. Each order must have a unique salt to produce a distinct order hash. Reusing a salt with the same parameters will cause the transaction to revert.
 </Warning>
+
+### Related references
+
+- [Decimal scaling](/concepts/decimal-scaling) — how `orderDecimals` / `adDecimals` rebase the amount across chains, and the errors that catch a mismatch.
+- [Recipient address invariants](/reference/recipient-addresses) — per-chain encoding rules for `orderRecipient` / `adRecipient` (EVM upper-bytes zero, Stellar Ed25519-only).
+- [Off-chain signing](/reference/off-chain-signing) — the TS recipe for reproducing the on-chain digest and pre-auth request hashes bit-for-bit.
