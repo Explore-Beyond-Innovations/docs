@@ -1,152 +1,151 @@
 ---
 title: "Roadmap"
 sidebarTitle: "Roadmap"
-description: "How ProofBridge rolls out — from the pre-authorization MVP to BLS peer consensus and the AI automation layer."
+description: "How ProofBridge rolls out — from the pre-auth MVP to BLS auth, agent-managed liquidity, mainnet, and post-mainnet decentralization."
 ---
 
-ProofBridge ships in stages. Each stage hardens the protocol and shrinks the scope of the backend relayer, moving the trust model closer to pure peer consensus between the two counterparties on a trade.
+ProofBridge ships in stages. Each phase tightens the trust model
+and expands what the protocol does without changing its core
+peer-to-peer-with-ZK-proof foundation. This page is the
+chronological / when-does-what view; see the
+[Architecture pages](/reference/architecture) for the contract-
+level changes and architecture diagrams per phase.
 
 ## Where we are now
 
-We are in **Phase 2 — Proof System Expansion & Automation.** The protocol is live on testnet with a stateful pre-authorization relayer that bootstraps trust during early testing. BLS signature aggregation is the next milestone and the end-state design the protocol is being rebuilt toward.
+We are at **Phase 1 — Pre-auth MVP**. The full bridge architecture
+is live on Sepolia ↔ Stellar Testnet, with real bridge transactions
+settling end-to-end through the contracts. The pre-auth relayer
+sits in front of every state-changing call as transitional
+scaffolding while the BLS-based end-state is being built.
 
 <Info>
-  The pre-auth relayer is transitional. Treat it as scaffolding — the protocol's security model is anchored on BLS peer consensus, not on the relayer.
+  The pre-auth relayer is **transitional**. Treat it as scaffolding
+  — the protocol's security model is anchored on BLS peer consensus
+  + ZK proof verification, not on the relayer. Phase 2 retires the
+  pre-auth path entirely.
 </Info>
 
-## Release phases
+## The five phases
 
 <Steps>
-  <Step title="Phase 1 — Foundation & Core Design (shipped)">
-    - Base protocol architecture and cross-chain design complete.
-    - Merkle Mountain Range (MMR) implemented for deposit tracking on each chain.
-    - `AdManager` and `OrderPortal` contracts deployed and integrated.
-    - Relayer-driven proof submission pipeline working end-to-end.
-    - Proof aggregator layer established for cross-chain verification.
-    - Internal documentation and component-level specs finalized.
+  <Step title="Phase 1 — Pre-auth MVP (live on testnet)">
+    - Stateful relayer with pre-authorization to bootstrap trust.
+    - On-chain Poseidon2 MMR per chain, ZK deposit proof at unlock.
+    - `AdManager`, `OrderPortal`, `MerkleManager`, `Verifier`, and
+      `wNativeToken` deployed on both chains.
+    - Real bridge transactions settling end-to-end on Sepolia ↔
+      Stellar Testnet.
+
+    See [Architecture — Phase 1](/reference/architecture/current-state).
   </Step>
-  <Step title="Phase 2 — Proof System Expansion & Automation (in progress)">
-    - Integrate BLS authorization signatures for Maker + Bridger trade validation.
-    - Build the AI automation layer for intelligent relayer selection and proof coordination.
-    - Extend the proof relay pipeline for batching and fault tolerance.
-    - Optimize the ProofBridge SDK and API for external developers.
-    - Finalize node and relayer configuration for public testnet rollout.
+
+  <Step title="Phase 2 — BLS Auth & Pre-auth Retirement (T1)">
+    - Both Maker and Bridger sign the order once with BLS; one
+      aggregated signature gates both `unlock` calls.
+    - Pre-auth manager-signing path removed entirely; relayer
+      becomes a stateless off-chain aggregator.
+    - Standalone Noir BLS auth circuit shipped as a building block
+      for proof-backed off-chain auth.
+    - MMR proof generation back to ≤30s on a reference machine.
+    - Route-commitment defense (existing ads survive admin
+      compromise), pause primitive, two-step admin transfer.
+
+    See [Architecture — Phase 2](/reference/architecture/phase-2-bls-auth).
   </Step>
-  <Step title="Phase 3 — Public Testnet & Developer Rollout">
-    - Launch a public testnet with the full cross-chain proof relay pipeline.
-    - Release the developer SDK, CLI tools, and complete documentation.
-    - Ship a dashboard for proof tracking and relayer performance metrics.
-    - Launch a bug bounty program and gather developer feedback.
-    - Establish early ecosystem partnerships with wallets and explorers.
+
+  <Step title="Phase 3 — Agents & Disputes (T2)">
+    - Soroban custom-account agents (per-maker) with policy-gated
+      authorization. EVM mirror via per-maker Safe Module.
+    - Multi-key `BLSKeyRegistry v2` with single-tx agent rotation.
+    - Order `deadline` field added; permissionless cancel paths
+      after expiry.
+    - Bonded dispute path with arbiter resolution
+      (`MutualRefund` / `TradeProceeds` / `BridgerForfeit` /
+      `MakerForfeit` outcomes).
+    - 14-day public testnet stability run with proof-gen, settlement,
+      and dispute metrics on a public dashboard.
+
+    See [Architecture — Phase 3](/reference/architecture/phase-3-agents-disputes).
   </Step>
-  <Step title="Phase 4 — Mainnet Preparation & Incentive Layer">
-    - Finalize and optimize contracts for mainnet deployment.
-    - Deploy the Relayer Incentive Module for decentralized proof submissions.
-    - Run an incentivized testnet campaign to simulate real-world activity.
-    - Tune system parameters and optimize proof latency.
-    - Prepare mainnet migration scripts and a release candidate build.
+
+  <Step title="Phase 4 — Mainnet Launch (T3)">
+    - Audit-gated mainnet deployment on Stellar + Ethereum.
+    - Admin handed off to multisig on each chain;
+      `ArbiterRole` held by a separate 5-of-7 multisig (3 team +
+      4 ecosystem signers).
+    - 24-hour operational timelock on critical admin functions
+      (route changes, fee parameters, role grants).
+    - Protocol fee mechanism live (0.2% to fee pool, 0.3% maker
+      LP profit, deducted destination-side).
+    - **Single launch route — `USDC ↔ USDC`** between Circle's
+      existing Ethereum ERC-20 and Stellar SAC. No ProofBridge-
+      issued wrapped assets.
+    - HA relayer infrastructure, public per-service status page,
+      cross-chain reconciliation listener.
+    - Developer SDK + OpenAPI spec.
+    - 4-week post-launch operational hardening window.
+
+    See [Architecture — Phase 4](/reference/architecture/phase-4-mainnet).
   </Step>
-  <Step title="Phase 5 — Mainnet Launch & Decentralization">
-    - Launch ProofBridge mainnet.
-    - Activate the Proof Registry and open the Relayer Network.
-    - Launch the ProofBridge DAO for governance and upgrade management.
-    - Introduce liquidity and proof-submission incentives.
-    - Expand integrations across additional L2 and cross-chain ecosystems.
+
+  <Step title="Phase 5 — Decentralization & Expansion (post-mainnet)">
+    Two foundational follow-up tranches plus several scoped
+    iterations, each separately funded and timed against post-
+    launch operational data:
+
+    - **DAO governance** for `ArbiterRole` — moves dispute
+      resolution from the multisig to community-elected stake-
+      weighted voting.
+    - **Agent slashing** — stake-and-slash penalty layer beyond
+      the existing dispute outcomes, calibrated against observed
+      mainnet misbehavior.
+    - **More chains** — Arbitrum, Base, Optimism, Polygon,
+      Starknet, Solana — each is a contract deployment + (for
+      non-EVM) circuit work using the existing T1+T2 contract
+      suite.
+    - **More routes** — RWA-specific (BENJI, CETES) and additional
+      stablecoin pairs, as ecosystem partnerships land.
+    - **Protocol-level optimizations** — per-route fee bps,
+      cross-token bonds via price oracle, auth + deposit combined
+      ZK proof for L2 batching.
+
+    See [Architecture — Phase 5](/reference/architecture/phase-5-followups).
   </Step>
 </Steps>
 
-## Protocol milestones
+## What changes phase to phase
 
-The phases above describe _when_ things ship. The milestones below describe _what_ the protocol becomes as they ship.
+| Phase | Trust model change | Capability change |
+|---|---|---|
+| Phase 1 | Single-key admin + trusted relayer | Bridging works; relayer is a liveness bottleneck |
+| Phase 2 | Pre-auth retired; aggregator becomes untrusted | One signed message per user, used on both unlocks |
+| Phase 3 | Agents act under policy; arbiter resolves disputes | Automated maker liquidity ops; stuck orders recoverable |
+| Phase 4 | Admin = multisig; arbiter = separate multisig; 24h timelock | Mainnet-ready; protocol fees live; USDC route active |
+| Phase 5 | Multisig → DAO governance; agents post stake | Decentralized arbitration; slashable misbehavior |
 
-### 1. Pre-authorization relayer — MVP (shipped)
+## SCF Build Award funding
 
-A stateful relayer pre-authorizes each trade to bootstrap trust during early testnet. The relayer:
-
-- Maintains pre-auth state for pending orders.
-- Detects on-chain deposits via user-triggered callbacks.
-- Fetches MMR inclusion proofs and triggers the deposit proof circuit.
-- Submits proofs to the destination `AdManager` and source `OrderPortal`.
-
-Single-relayer model during early testing, with MMR trees maintained per chain and ZK proof circuits for inclusion and trade-constraint validation.
-
-<Note>
-  This is a transitional stage. The relayer's role shrinks as BLS aggregation comes online in the next milestone.
-</Note>
-
-### 2. BLS signature aggregation (next)
-
-The end-state authentication model. The Maker and Bridger co-sign each order with BLS signatures. A relayer aggregates both signatures into a compact proof of agreement and submits it on-chain.
-
-Authentication moves from relayer state to cryptographic signatures, which unlocks:
-
-<CardGroup cols={2}>
-  <Card title="Stateless relayer" icon="server">
-    No per-order state to maintain. Any relayer can submit a proof as long as it has both signatures.
-  </Card>
-  <Card title="Permissionless submission" icon="user-plus">
-    Anyone can operate a relayer. Proof submission becomes an open-market role with no allowlist.
-  </Card>
-  <Card title="Multi-relayer competition" icon="users">
-    Multiple relayers can race to submit the same proof. The first valid submission wins, improving liveness.
-  </Card>
-  <Card title="Shrinking trust scope" icon="shield-halved">
-    The protocol no longer depends on a trusted relayer to validate trades. Validity is cryptographic, not operational.
-  </Card>
-</CardGroup>
-
-### 3. AI automation layer
-
-AI-driven agents run continuously on behalf of Makers and Bridgers under scoped, programmable authority. Agents never hold custody of user funds — they operate within explicit policy limits set by the user.
-
-**What agents do:**
-
-<CardGroup cols={2}>
-  <Card title="Real-time monitoring" icon="chart-line">
-    Watch open ads, incoming orders, and proof status across chains. Surface activity to the account owner as it happens.
-  </Card>
-  <Card title="Anomaly detection" icon="triangle-exclamation">
-    Flag suspicious activity, stale liquidity, or misrouted orders before they cause losses.
-  </Card>
-  <Card title="Automated matching" icon="arrows-to-circle">
-    Match incoming orders to open ads under the Maker's policy rules and trigger settlement automatically.
-  </Card>
-  <Card title="Adaptive fee optimization" icon="coins">
-    Adjust quoted rates in response to network conditions, competing ads, and gas costs.
-  </Card>
-  <Card title="Predictive liquidity provisioning" icon="droplet">
-    Rebalance liquidity across chains and token pairs ahead of anticipated demand.
-  </Card>
-  <Card title="Co-pilot relayer" icon="robot">
-    Assist human relayer operators during the permissioned phase, then run autonomously once BLS aggregation removes the trust gate.
-  </Card>
-</CardGroup>
-
-**Scoped authority model.** Each agent gets explicit, narrow permissions rather than full custody. For example:
-
-> *"This Maker agent may execute up to 100 USDC of settlement against orderHash 0xabc…, and nothing else."*
-
-Authority is bounded by token, amount, and order hash. Policies can be revoked at any time, and the underlying funds remain in the user's own contracts throughout. This is the difference between an autonomous operator and a custodial service — the agent acts, but the user still owns.
-
-**Why this works on ProofBridge.** Agent-driven automation depends on chains that expose account-abstraction primitives: scheduled execution, scoped signing authority, and programmable policy checks at the account layer. ProofBridge's current EVM (Sepolia) and Stellar integrations both support these primitives — EVM via ERC-4337-compatible account abstraction, Stellar through its native account model. Additional chains will be added as they mature.
-
-<Note>
-  The AI automation layer is on the roadmap, not in production. See [Phase 2](#release-phases) for the current integration work.
-</Note>
+Phases 2, 3, and 4 are funded as the three tranches of the SCF
+Build Award (T1, T2, T3). Phase 5 items are out of scope for the
+current Build Award and are pursued as separate follow-up
+tranches.
 
 ## Further reading
 
 <CardGroup cols={2}>
-  <Card title="How it works" icon="circle-info" href="/how-it-works">
-    The architecture and the 12-step cross-chain flow today.
+  <Card title="Architecture — overview" icon="diagram-project" href="/reference/architecture">
+    Per-phase architecture diagrams and contract-level details.
+  </Card>
+  <Card title="How it works (today)" icon="circle-info" href="/how-it-works">
+    The current 12-step cross-chain flow as it actually runs on
+    testnet.
   </Card>
   <Card title="Security model" icon="shield" href="/reference/security-model">
-    Trust assumptions in the current phase and under the BLS end-state.
+    Trust assumptions in the current phase and how they shrink
+    through Phases 2–5.
   </Card>
   <Card title="Why ProofBridge" icon="lightbulb" href="/why-proofbridge">
     The problem space and why the peer-consensus design solves it.
-  </Card>
-  <Card title="Contribute" icon="code-branch" href="/contribute/run-locally">
-    Run the full stack locally and start shipping.
   </Card>
 </CardGroup>
