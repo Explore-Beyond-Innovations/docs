@@ -71,6 +71,17 @@
           {
             "group": "Reference",
             "pages": [
+              {
+                "group": "Architecture",
+                "pages": [
+                  "reference/architecture/index",
+                  "reference/architecture/current-state",
+                  "reference/architecture/phase-2-bls-auth",
+                  "reference/architecture/phase-3-agents-disputes",
+                  "reference/architecture/phase-4-mainnet",
+                  "reference/architecture/phase-5-followups"
+                ]
+              },
               "reference/smart-contracts",
               "reference/recipient-addresses",
               "reference/off-chain-signing",

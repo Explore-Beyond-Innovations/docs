@@ -1,0 +1,119 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1427" height="645" viewBox="0 0 571 258" font-family="Arial, sans-serif">
+  <defs>
+    <marker id="ah" viewBox="0 0 8 6" refX="8" refY="3"
+      markerWidth="4" markerHeight="3" orient="auto">
+      <path d="M0.5,0.5 L7,3 L0.5,5.5" fill="none" stroke="#94A3B8"
+        stroke-width="1.2" stroke-linejoin="round" stroke-linecap="round"/>
+    </marker>
+    <filter id="shadow" x="-6%" y="-8%" width="112%" height="128%">
+      <feDropShadow dx="0" dy="0.5" stdDeviation="0.8"
+        flood-color="#000" flood-opacity="0.05"/>
+    </filter>
+  </defs>
+  <rect width="571" height="258" fill="#F8F9FB" rx="3"/>
+  <text x="286" y="11" text-anchor="middle" font-size="6" font-weight="700" fill="#1E293B">Security gates — what protects bridge funds at unlock</text>
+  <rect x="211" y="16" width="150" height="10" rx="3" fill="#fff" stroke="#E2E5EA" stroke-width="0.4"/>
+  <rect x="216" y="18.5" width="5" height="5" rx="2.5" fill="#fff" stroke="#E2E5EA" stroke-width="0.4"/>
+  <text x="224" y="22.5" font-size="3.5" fill="#1E293B">Actor</text>
+  <rect x="256" y="18.5" width="5" height="5" rx="1.5" fill="#fff" stroke="#E2E5EA" stroke-width="0.4"/>
+  <rect x="257" y="19.5" width="0.8" height="3" rx="0.4" fill="#3B82F6"/>
+  <text x="264" y="22.5" font-size="3.5" fill="#1E293B">Protocol</text>
+  <rect x="304" y="18.5" width="5" height="5" rx="1.5" fill="#fff" stroke="#E2E5EA" stroke-width="0.4"/>
+  <rect x="305" y="19.5" width="0.8" height="3" rx="0.4" fill="#F59E0B"/>
+  <text x="312" y="22.5" font-size="3.5" fill="#1E293B">External</text>
+  <path d="M87.0,46.0 C87.0,70.0 197.2,70.0 197.2,94.0" fill="none" stroke="#94A3B8" stroke-width="0.5" marker-end="url(#ah)"/>
+  <path d="M183.0,46.0 C183.0,70.0 197.2,70.0 197.2,94.0" fill="none" stroke="#94A3B8" stroke-width="0.5" marker-end="url(#ah)"/>
+  <path d="M87.0,46.0 C87.0,70.0 79.6,70.0 79.6,94.0" fill="none" stroke="#94A3B8" stroke-width="0.5" marker-end="url(#ah)"/>
+  <path d="M183.0,46.0 C183.0,70.0 79.6,70.0 79.6,94.0" fill="none" stroke="#94A3B8" stroke-width="0.5" marker-end="url(#ah)"/>
+  <path d="M129.2,112.0 C135.8,130.0 144.6,130.0 151.2,114.0" fill="none" stroke="#94A3B8" stroke-width="0.5" marker-end="url(#ah)"/>
+  <path d="M129.2,112.0 C199.9,134.0 294.1,134.0 364.8,114.0" fill="none" stroke="#94A3B8" stroke-width="0.5" marker-end="url(#ah)"/>
+  <path d="M197.2,114.0 C197.2,135.0 176.1,135.0 176.1,156.0" fill="none" stroke="#94A3B8" stroke-width="0.5" marker-end="url(#ah)"/>
+  <path d="M413.2,114.0 C413.2,135.0 395.5,135.0 395.5,156.0" fill="none" stroke="#94A3B8" stroke-width="0.5" marker-end="url(#ah)"/>
+  <path d="M413.2,114.0 C413.2,135.0 499.9,135.0 499.9,156.0" fill="none" stroke="#94A3B8" stroke-width="0.5" marker-end="url(#ah)"/>
+  <path d="M197.2,114.0 C197.2,135.0 239.0,135.0 239.0,156.0" fill="none" stroke="#94A3B8" stroke-width="0.5" marker-end="url(#ah)"/>
+  <path d="M239.0,156.0 C239.0,187.0 280.9,187.0 280.9,218.0" fill="none" stroke="#94A3B8" stroke-width="0.5" marker-end="url(#ah)"/>
+  <path d="M413.2,114.0 Q342.3,166.0 347.0,156.0" fill="none" stroke="#94A3B8" stroke-width="0.5" marker-end="url(#ah)"/>
+  <path d="M347.0,156.0 C347.0,187.0 280.9,187.0 280.9,218.0" fill="none" stroke="#94A3B8" stroke-width="0.5" marker-end="url(#ah)"/>
+  <path d="M304.0,114.0 C304.0,135.0 292.4,135.0 292.4,156.0" fill="none" stroke="#94A3B8" stroke-width="0.5" marker-end="url(#ah)"/>
+  <path d="M292.4,156.0 C292.4,187.0 280.9,187.0 280.9,218.0" fill="none" stroke="#94A3B8" stroke-width="0.5" marker-end="url(#ah)"/>
+  <g filter="url(#shadow)">
+    <rect x="50.0" y="32.0" width="74.0" height="14" rx="7" fill="#fff" stroke="#E2E5EA" stroke-width="0.5"/>
+    <text x="87.0" y="40.8" text-anchor="middle" font-size="4.8" font-weight="600" fill="#1E293B">Bridger</text>
+  </g>
+  <g filter="url(#shadow)">
+    <rect x="146.0" y="32.0" width="74.0" height="14" rx="7" fill="#fff" stroke="#E2E5EA" stroke-width="0.5"/>
+    <text x="183.0" y="40.8" text-anchor="middle" font-size="4.8" font-weight="600" fill="#1E293B">Maker</text>
+  </g>
+  <g filter="url(#shadow)">
+    <rect x="30.0" y="94.0" width="99.2" height="20" rx="3" fill="#fff" stroke="#E2E5EA" stroke-width="0.5"/>
+    <rect x="33.0" y="97.0" width="1.4" height="14" rx="0.6" fill="#3B82F6"/>
+    <text x="79.6" y="103.5" text-anchor="middle" font-size="4.8" font-weight="600" fill="#1E293B">EIP-712 binding</text>
+    <text x="79.6" y="108.5" text-anchor="middle" font-size="3.5" fill="#64748B">Chain + contract bound</text>
+  </g>
+  <g filter="url(#shadow)">
+    <rect x="151.2" y="94.0" width="92.0" height="20" rx="3" fill="#fff" stroke="#E2E5EA" stroke-width="0.5"/>
+    <rect x="154.2" y="97.0" width="1.4" height="14" rx="0.6" fill="#3B82F6"/>
+    <text x="197.2" y="103.5" text-anchor="middle" font-size="4.8" font-weight="600" fill="#1E293B">BLS aggregate</text>
+    <text x="197.2" y="108.5" text-anchor="middle" font-size="3.5" fill="#64748B">Both parties consent</text>
+  </g>
+  <g filter="url(#shadow)">
+    <rect x="364.8" y="94.0" width="96.8" height="20" rx="3" fill="#fff" stroke="#E2E5EA" stroke-width="0.5"/>
+    <rect x="367.8" y="97.0" width="1.4" height="14" rx="0.6" fill="#3B82F6"/>
+    <text x="413.2" y="103.5" text-anchor="middle" font-size="4.8" font-weight="600" fill="#1E293B">ZK deposit proof</text>
+    <text x="413.2" y="108.5" text-anchor="middle" font-size="3.5" fill="#64748B">MMR + nullifier</text>
+  </g>
+  <g filter="url(#shadow)">
+    <rect x="265.2" y="94.0" width="77.6" height="20" rx="3" fill="#fff" stroke="#E2E5EA" stroke-width="0.5"/>
+    <rect x="268.2" y="97.0" width="1.4" height="14" rx="0.6" fill="#3B82F6"/>
+    <text x="304.0" y="103.5" text-anchor="middle" font-size="4.8" font-weight="600" fill="#1E293B">Order status</text>
+    <text x="304.0" y="108.5" text-anchor="middle" font-size="3.5" fill="#64748B">Must be Open</text>
+  </g>
+  <g filter="url(#shadow)">
+    <rect x="132.5" y="156.0" width="87.2" height="20" rx="3" fill="#fff" stroke="#E2E5EA" stroke-width="0.5"/>
+    <rect x="135.5" y="159.0" width="1.4" height="14" rx="0.6" fill="#3B82F6"/>
+    <text x="176.1" y="165.5" text-anchor="middle" font-size="4.8" font-weight="600" fill="#1E293B">BLSKeyRegistry</text>
+    <text x="176.1" y="170.5" text-anchor="middle" font-size="3.5" fill="#64748B">Lookup pkAgg</text>
+  </g>
+  <g filter="url(#shadow)">
+    <rect x="354.3" y="156.0" width="82.4" height="20" rx="3" fill="#fff" stroke="#E2E5EA" stroke-width="0.5"/>
+    <rect x="357.3" y="159.0" width="1.4" height="14" rx="0.6" fill="#3B82F6"/>
+    <text x="395.5" y="165.5" text-anchor="middle" font-size="4.8" font-weight="600" fill="#1E293B">MerkleManager</text>
+    <text x="395.5" y="170.5" text-anchor="middle" font-size="3.5" fill="#64748B">Side-bound leaf</text>
+  </g>
+  <g filter="url(#shadow)">
+    <rect x="458.7" y="156.0" width="82.4" height="20" rx="3" fill="#fff" stroke="#E2E5EA" stroke-width="0.5"/>
+    <rect x="461.7" y="159.0" width="1.4" height="14" rx="0.6" fill="#3B82F6"/>
+    <text x="499.9" y="165.5" text-anchor="middle" font-size="4.8" font-weight="600" fill="#1E293B">nullifierUsed</text>
+    <text x="499.9" y="170.5" text-anchor="middle" font-size="3.5" fill="#64748B">One-time guard</text>
+  </g>
+  <g filter="url(#shadow)">
+    <rect x="231.3" y="218.0" width="99.2" height="20" rx="3" fill="#fff" stroke="#E2E5EA" stroke-width="0.5"/>
+    <rect x="234.3" y="221.0" width="1.4" height="14" rx="0.6" fill="#F59E0B"/>
+    <text x="280.9" y="227.5" text-anchor="middle" font-size="4.8" font-weight="600" fill="#1E293B">Funds released</text>
+    <text x="280.9" y="232.5" text-anchor="middle" font-size="3.5" fill="#64748B">Only if all gates pass</text>
+  </g>
+  <rect x="130.5" y="65.0" width="23.2" height="6.0" rx="1" fill="#F8F9FB"/>
+  <text x="142.1" y="70.0" font-size="4" fill="#1E293B" font-weight="500" text-anchor="middle">BLS sign</text>
+  <rect x="178.5" y="65.0" width="23.2" height="6.0" rx="1" fill="#F8F9FB"/>
+  <text x="190.1" y="70.0" font-size="4" fill="#1E293B" font-weight="500" text-anchor="middle">BLS sign</text>
+  <rect x="68.1" y="65.0" width="30.4" height="6.0" rx="1" fill="#F8F9FB"/>
+  <text x="83.3" y="70.0" font-size="4" fill="#1E293B" font-weight="500" text-anchor="middle">binds order</text>
+  <rect x="116.1" y="57.0" width="30.4" height="6.0" rx="1" fill="#F8F9FB"/>
+  <text x="131.3" y="62.0" font-size="4" fill="#1E293B" font-weight="500" text-anchor="middle">binds order</text>
+  <rect x="127.4" y="129.0" width="25.6" height="6.0" rx="1" fill="#F8F9FB"/>
+  <text x="140.2" y="134.0" font-size="4" fill="#1E293B" font-weight="500" text-anchor="middle">orderHash</text>
+  <rect x="230.6" y="133.0" width="32.8" height="6.0" rx="1" fill="#F8F9FB"/>
+  <text x="247.0" y="138.0" font-size="4" fill="#1E293B" font-weight="500" text-anchor="middle">public input</text>
+  <rect x="167.9" y="130.0" width="37.6" height="6.0" rx="1" fill="#F8F9FB"/>
+  <text x="186.7" y="135.0" font-size="4" fill="#1E293B" font-weight="500" text-anchor="middle">lookup pubkeys</text>
+  <rect x="386.8" y="130.0" width="35.2" height="6.0" rx="1" fill="#F8F9FB"/>
+  <text x="404.4" y="135.0" font-size="4" fill="#1E293B" font-weight="500" text-anchor="middle">MMR inclusion</text>
+  <rect x="436.6" y="130.0" width="40.0" height="6.0" rx="1" fill="#F8F9FB"/>
+  <text x="456.6" y="135.0" font-size="4" fill="#1E293B" font-weight="500" text-anchor="middle">fresh nullifier</text>
+  <rect x="245.9" y="182.0" width="28.0" height="6.0" rx="1" fill="#F8F9FB"/>
+  <text x="259.9" y="187.0" font-size="4" fill="#1E293B" font-weight="500" text-anchor="middle">pairing OK</text>
+  <rect x="295.1" y="182.0" width="37.6" height="6.0" rx="1" fill="#F8F9FB"/>
+  <text x="313.9" y="187.0" font-size="4" fill="#1E293B" font-weight="500" text-anchor="middle">proof verifies</text>
+  <rect x="271.4" y="174.0" width="30.4" height="6.0" rx="1" fill="#F8F9FB"/>
+  <text x="286.6" y="179.0" font-size="4" fill="#1E293B" font-weight="500" text-anchor="middle">status Open</text>
+</svg>

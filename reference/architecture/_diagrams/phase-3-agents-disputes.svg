@@ -1,0 +1,134 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1408" height="645" viewBox="0 0 564 258" font-family="Arial, sans-serif">
+  <defs>
+    <marker id="ah" viewBox="0 0 8 6" refX="8" refY="3"
+      markerWidth="4" markerHeight="3" orient="auto">
+      <path d="M0.5,0.5 L7,3 L0.5,5.5" fill="none" stroke="#94A3B8"
+        stroke-width="1.2" stroke-linejoin="round" stroke-linecap="round"/>
+    </marker>
+    <filter id="shadow" x="-6%" y="-8%" width="112%" height="128%">
+      <feDropShadow dx="0" dy="0.5" stdDeviation="0.8"
+        flood-color="#000" flood-opacity="0.05"/>
+    </filter>
+  </defs>
+  <rect width="564" height="258" fill="#F8F9FB" rx="3"/>
+  <text x="282" y="11" text-anchor="middle" font-size="6" font-weight="700" fill="#1E293B">Phase 3 — AI Agents &amp; Dispute Resolution (T2 end-state)</text>
+  <rect x="207" y="16" width="150" height="10" rx="3" fill="#fff" stroke="#E2E5EA" stroke-width="0.4"/>
+  <rect x="212" y="18.5" width="5" height="5" rx="2.5" fill="#fff" stroke="#E2E5EA" stroke-width="0.4"/>
+  <text x="220" y="22.5" font-size="3.5" fill="#1E293B">Actor</text>
+  <rect x="252" y="18.5" width="5" height="5" rx="1.5" fill="#fff" stroke="#E2E5EA" stroke-width="0.4"/>
+  <rect x="253" y="19.5" width="0.8" height="3" rx="0.4" fill="#3B82F6"/>
+  <text x="260" y="22.5" font-size="3.5" fill="#1E293B">Protocol</text>
+  <rect x="300" y="18.5" width="5" height="5" rx="1.5" fill="#fff" stroke="#E2E5EA" stroke-width="0.4"/>
+  <rect x="301" y="19.5" width="0.8" height="3" rx="0.4" fill="#F59E0B"/>
+  <text x="308" y="22.5" font-size="3.5" fill="#1E293B">External</text>
+  <path d="M77.8,46.0 C77.8,70.0 187.0,70.0 187.0,94.0" fill="none" stroke="#94A3B8" stroke-width="0.5" marker-end="url(#ah)"/>
+  <path d="M284.2,46.0 C284.2,70.0 187.0,70.0 187.0,94.0" fill="none" stroke="#94A3B8" stroke-width="0.5" marker-end="url(#ah)"/>
+  <path d="M182.8,46.0 C182.8,70.0 320.4,70.0 320.4,94.0" fill="none" stroke="#94A3B8" stroke-width="0.5" marker-end="url(#ah)"/>
+  <path d="M77.8,46.0 C77.8,70.0 73.6,70.0 73.6,94.0" fill="none" stroke="#94A3B8" stroke-width="0.5" marker-end="url(#ah)"/>
+  <path d="M182.8,46.0 C182.8,70.0 73.6,70.0 73.6,94.0" fill="none" stroke="#94A3B8" stroke-width="0.5" marker-end="url(#ah)"/>
+  <path d="M392.8,46.0 C392.8,70.0 425.4,70.0 425.4,94.0" fill="none" stroke="#94A3B8" stroke-width="0.5" marker-end="url(#ah)"/>
+  <path d="M392.8,46.0 C392.8,70.0 320.4,70.0 320.4,94.0" fill="none" stroke="#94A3B8" stroke-width="0.5" marker-end="url(#ah)"/>
+  <path d="M497.2,46.0 C497.2,70.0 425.4,70.0 425.4,94.0" fill="none" stroke="#94A3B8" stroke-width="0.5" marker-end="url(#ah)"/>
+  <path d="M497.2,46.0 C497.2,70.0 320.4,70.0 320.4,94.0" fill="none" stroke="#94A3B8" stroke-width="0.5" marker-end="url(#ah)"/>
+  <path d="M234.8,112.0 C278.7,126.0 337.3,126.0 381.2,114.0" fill="none" stroke="#94A3B8" stroke-width="0.5" marker-end="url(#ah)"/>
+  <path d="M381.2,112.0 C302.0,130.0 196.4,130.0 117.2,114.0" fill="none" stroke="#94A3B8" stroke-width="0.5" marker-end="url(#ah)"/>
+  <path d="M425.4,114.0 C425.4,135.0 339.9,135.0 339.9,156.0" fill="none" stroke="#94A3B8" stroke-width="0.5" marker-end="url(#ah)"/>
+  <path d="M425.4,114.0 C425.4,135.0 445.5,135.0 445.5,156.0" fill="none" stroke="#94A3B8" stroke-width="0.5" marker-end="url(#ah)"/>
+  <path d="M320.4,114.0 C320.4,135.0 339.9,135.0 339.9,156.0" fill="none" stroke="#94A3B8" stroke-width="0.5" marker-end="url(#ah)"/>
+  <path d="M320.4,114.0 C320.4,135.0 445.5,135.0 445.5,156.0" fill="none" stroke="#94A3B8" stroke-width="0.5" marker-end="url(#ah)"/>
+  <path d="M445.5,176.0 C445.5,197.0 434.5,197.0 434.5,218.0" fill="none" stroke="#94A3B8" stroke-width="0.5" marker-end="url(#ah)"/>
+  <g filter="url(#shadow)">
+    <rect x="33.6" y="32.0" width="88.4" height="14" rx="7" fill="#fff" stroke="#E2E5EA" stroke-width="0.5"/>
+    <text x="77.8" y="40.8" text-anchor="middle" font-size="4.8" font-weight="600" fill="#1E293B">Maker</text>
+  </g>
+  <g filter="url(#shadow)">
+    <rect x="144.0" y="32.0" width="77.6" height="14" rx="7" fill="#fff" stroke="#E2E5EA" stroke-width="0.5"/>
+    <text x="182.8" y="40.8" text-anchor="middle" font-size="4.8" font-weight="600" fill="#1E293B">Bridger</text>
+  </g>
+  <g filter="url(#shadow)">
+    <rect x="243.6" y="32.0" width="81.2" height="14" rx="7" fill="#fff" stroke="#E2E5EA" stroke-width="0.5"/>
+    <text x="284.2" y="40.8" text-anchor="middle" font-size="4.8" font-weight="600" fill="#1E293B">Agent</text>
+  </g>
+  <g filter="url(#shadow)">
+    <rect x="346.8" y="32.0" width="92.0" height="14" rx="7" fill="#fff" stroke="#E2E5EA" stroke-width="0.5"/>
+    <text x="392.8" y="40.8" text-anchor="middle" font-size="4.8" font-weight="600" fill="#1E293B">Aggregator</text>
+  </g>
+  <g filter="url(#shadow)">
+    <rect x="460.8" y="32.0" width="72.8" height="14" rx="7" fill="#fff" stroke="#E2E5EA" stroke-width="0.5"/>
+    <text x="497.2" y="40.8" text-anchor="middle" font-size="4.8" font-weight="600" fill="#1E293B">ArbiterRole</text>
+  </g>
+  <g filter="url(#shadow)">
+    <rect x="139.2" y="94.0" width="95.6" height="20" rx="3" fill="#fff" stroke="#E2E5EA" stroke-width="0.5"/>
+    <rect x="142.2" y="97.0" width="1.4" height="14" rx="0.6" fill="#3B82F6"/>
+    <text x="187.0" y="103.5" text-anchor="middle" font-size="4.8" font-weight="600" fill="#1E293B">Agent Account</text>
+    <text x="187.0" y="108.5" text-anchor="middle" font-size="3.5" fill="#64748B">__check_auth + policy</text>
+  </g>
+  <g filter="url(#shadow)">
+    <rect x="30.0" y="94.0" width="87.2" height="20" rx="3" fill="#fff" stroke="#E2E5EA" stroke-width="0.5"/>
+    <rect x="33.0" y="97.0" width="1.4" height="14" rx="0.6" fill="#3B82F6"/>
+    <text x="73.6" y="103.5" text-anchor="middle" font-size="4.8" font-weight="600" fill="#1E293B">BLSKeyRegistry</text>
+    <text x="73.6" y="108.5" text-anchor="middle" font-size="3.5" fill="#64748B">v2: multi-slot</text>
+  </g>
+  <g filter="url(#shadow)">
+    <rect x="381.2" y="94.0" width="88.4" height="20" rx="3" fill="#fff" stroke="#E2E5EA" stroke-width="0.5"/>
+    <rect x="384.2" y="97.0" width="1.4" height="14" rx="0.6" fill="#3B82F6"/>
+    <text x="425.4" y="103.5" text-anchor="middle" font-size="4.8" font-weight="600" fill="#1E293B">AdManager</text>
+    <text x="425.4" y="108.5" text-anchor="middle" font-size="3.5" fill="#64748B">Dispute paths added</text>
+  </g>
+  <g filter="url(#shadow)">
+    <rect x="281.6" y="94.0" width="77.6" height="20" rx="3" fill="#fff" stroke="#E2E5EA" stroke-width="0.5"/>
+    <rect x="284.6" y="97.0" width="1.4" height="14" rx="0.6" fill="#3B82F6"/>
+    <text x="320.4" y="103.5" text-anchor="middle" font-size="4.8" font-weight="600" fill="#1E293B">OrderPortal</text>
+    <text x="320.4" y="108.5" text-anchor="middle" font-size="3.5" fill="#64748B">Cancel + dispute</text>
+  </g>
+  <g filter="url(#shadow)">
+    <rect x="298.7" y="156.0" width="82.4" height="20" rx="3" fill="#fff" stroke="#E2E5EA" stroke-width="0.5"/>
+    <rect x="301.7" y="159.0" width="1.4" height="14" rx="0.6" fill="#3B82F6"/>
+    <text x="339.9" y="165.5" text-anchor="middle" font-size="4.8" font-weight="600" fill="#1E293B">MerkleManager</text>
+    <text x="339.9" y="170.5" text-anchor="middle" font-size="3.5" fill="#64748B">Side-bound MMR</text>
+  </g>
+  <g filter="url(#shadow)">
+    <rect x="403.1" y="156.0" width="84.8" height="20" rx="3" fill="#fff" stroke="#E2E5EA" stroke-width="0.5"/>
+    <rect x="406.1" y="159.0" width="1.4" height="14" rx="0.6" fill="#3B82F6"/>
+    <text x="445.5" y="165.5" text-anchor="middle" font-size="4.8" font-weight="600" fill="#1E293B">Verifier</text>
+    <text x="445.5" y="170.5" text-anchor="middle" font-size="3.5" fill="#64748B">UltraHonk on BN254</text>
+  </g>
+  <g filter="url(#shadow)">
+    <rect x="393.3" y="218.0" width="82.4" height="20" rx="3" fill="#fff" stroke="#E2E5EA" stroke-width="0.5"/>
+    <rect x="396.3" y="221.0" width="1.4" height="14" rx="0.6" fill="#F59E0B"/>
+    <text x="434.5" y="227.5" text-anchor="middle" font-size="4.8" font-weight="600" fill="#1E293B">Noir Circuits</text>
+    <text x="434.5" y="232.5" text-anchor="middle" font-size="3.5" fill="#64748B">Deposit + auth</text>
+  </g>
+  <rect x="107.6" y="65.0" width="49.6" height="6.0" rx="1" fill="#F8F9FB"/>
+  <text x="132.4" y="70.0" font-size="4" fill="#1E293B" font-weight="500" text-anchor="middle">set policy / revoke</text>
+  <rect x="209.6" y="65.0" width="52.0" height="6.0" rx="1" fill="#F8F9FB"/>
+  <text x="235.6" y="70.0" font-size="4" fill="#1E293B" font-weight="500" text-anchor="middle">lock + sign (scoped)</text>
+  <rect x="236.4" y="57.0" width="30.4" height="6.0" rx="1" fill="#F8F9FB"/>
+  <text x="251.6" y="62.0" font-size="4" fill="#1E293B" font-weight="500" text-anchor="middle">createOrder</text>
+  <rect x="48.5" y="65.0" width="54.4" height="6.0" rx="1" fill="#F8F9FB"/>
+  <text x="75.7" y="70.0" font-size="4" fill="#1E293B" font-weight="500" text-anchor="middle">register agent pubkey</text>
+  <rect x="108.2" y="57.0" width="40.0" height="6.0" rx="1" fill="#F8F9FB"/>
+  <text x="128.2" y="62.0" font-size="4" fill="#1E293B" font-weight="500" text-anchor="middle">register pubkey</text>
+  <rect x="387.9" y="65.0" width="42.4" height="6.0" rx="1" fill="#F8F9FB"/>
+  <text x="409.1" y="70.0" font-size="4" fill="#1E293B" font-weight="500" text-anchor="middle">unlock + agg sig</text>
+  <rect x="335.4" y="65.0" width="42.4" height="6.0" rx="1" fill="#F8F9FB"/>
+  <text x="356.6" y="70.0" font-size="4" fill="#1E293B" font-weight="500" text-anchor="middle">unlock + agg sig</text>
+  <rect x="441.3" y="65.0" width="40.0" height="6.0" rx="1" fill="#F8F9FB"/>
+  <text x="461.3" y="70.0" font-size="4" fill="#1E293B" font-weight="500" text-anchor="middle">resolve_dispute</text>
+  <rect x="388.8" y="57.0" width="40.0" height="6.0" rx="1" fill="#F8F9FB"/>
+  <text x="408.8" y="62.0" font-size="4" fill="#1E293B" font-weight="500" text-anchor="middle">resolve_dispute</text>
+  <rect x="289.2" y="125.0" width="37.6" height="6.0" rx="1" fill="#F8F9FB"/>
+  <text x="308.0" y="130.0" font-size="4" fill="#1E293B" font-weight="500" text-anchor="middle">lock_for_order</text>
+  <rect x="234.0" y="129.0" width="30.4" height="6.0" rx="1" fill="#F8F9FB"/>
+  <text x="249.2" y="134.0" font-size="4" fill="#1E293B" font-weight="500" text-anchor="middle">lookup slot</text>
+  <rect x="362.7" y="130.0" width="40.0" height="6.0" rx="1" fill="#F8F9FB"/>
+  <text x="382.7" y="135.0" font-size="4" fill="#1E293B" font-weight="500" text-anchor="middle">appendOrderHash</text>
+  <rect x="409.5" y="130.0" width="52.0" height="6.0" rx="1" fill="#F8F9FB"/>
+  <text x="435.5" y="135.0" font-size="4" fill="#1E293B" font-weight="500" text-anchor="middle">verify deposit proof</text>
+  <rect x="310.2" y="134.0" width="40.0" height="6.0" rx="1" fill="#F8F9FB"/>
+  <text x="330.2" y="139.0" font-size="4" fill="#1E293B" font-weight="500" text-anchor="middle">appendOrderHash</text>
+  <rect x="357.0" y="122.0" width="52.0" height="6.0" rx="1" fill="#F8F9FB"/>
+  <text x="383.0" y="127.0" font-size="4" fill="#1E293B" font-weight="500" text-anchor="middle">verify deposit proof</text>
+  <rect x="421.2" y="192.0" width="37.6" height="6.0" rx="1" fill="#F8F9FB"/>
+  <text x="440.0" y="197.0" font-size="4" fill="#1E293B" font-weight="500" text-anchor="middle">ZK proof input</text>
+</svg>

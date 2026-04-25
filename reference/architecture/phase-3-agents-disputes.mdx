@@ -1,0 +1,200 @@
+---
+title: "Phase 3 — AI Agents & Dispute Resolution"
+sidebarTitle: "Phase 3 — Agents & Disputes"
+description: "Soroban custom-account agents under scoped policies, order deadlines and cancel paths, bonded disputes with arbiter resolution, multi-key BLS registry."
+---
+
+<Note>
+  🔨 **Status: planned (T2 of the SCF Build Award).** Designed,
+  not yet shipped. Builds on Phase 2's BLS-only auth model.
+  Lands the agent-account model and dispute-handling paths on
+  testnet, plus the multi-key `BLSKeyRegistry` upgrade.
+</Note>
+
+Phase 3 adds two end-user capabilities that were intentionally
+deferred from earlier phases: **automated maker liquidity
+operations under scoped authority**, and **dispute paths for
+stuck or contested orders**. Both depend on the Phase 2 BLS
+foundation but introduce new on-chain primitives.
+
+## Architecture diagram
+
+<img src="/reference/architecture/_diagrams/phase-3-agents-disputes.svg" alt="Phase 3 architecture — Agents and disputes" />
+
+Compared to [Phase 2](/reference/architecture/phase-2-bls-auth):
+
+- A new **Agent** actor sits between the maker and `AdManager`,
+  acting under the maker's scoped authorization rather than as
+  the maker directly.
+- A new **Agent Account** contract gates every agent action
+  through a stored policy table.
+- `BLSKeyRegistry` upgrades to **v2** — multi-slot per address,
+  with an aggregator slot hint at unlock time, enabling single-tx
+  agent rotation.
+- `AdManager` and `OrderPortal` gain **dispute paths**:
+  `cancel_order` / `cancel_lock` after deadline, and a structured
+  `dispute / respond / resolve` lifecycle gated by `ArbiterRole`.
+- A new **ArbiterRole** actor holds dispute-resolution authority.
+  In T2 this equals the protocol admin; the role moves to a
+  multisig in [Phase 4](/reference/architecture/phase-4-mainnet).
+
+## What changes at the contract layer
+
+<CardGroup cols={2}>
+  <Card title="Agent Account (Soroban + EVM)" icon="robot">
+    Maker deploys their own contract — Soroban custom account
+    with `__check_auth`, or per-maker Safe Module on EVM. Stores
+    a policy table per agent (allowed actions, token whitelist,
+    per-order cap, rate limit, expiry, revocation flag).
+  </Card>
+  <Card title="Multi-key BLSKeyRegistry v2" icon="layer-group">
+    Replaces Phase 2's single-key registry. Each address can hold
+    up to 5 active key slots with stable monotonic IDs and a
+    `valid_until` timestamp per slot. `unlock` takes a slot hint
+    so pairing-check cost stays at one attempt.
+  </Card>
+  <Card title="OrderData gains `deadline`" icon="clock">
+    The `Order` struct expands from 15 to 16 fields — a signed
+    `deadline` set per route. Both parties sign the deadline;
+    each chain validates it's within bounds at create / lock
+    time.
+  </Card>
+  <Card title="Cancel paths" icon="rotate-left">
+    `cancel_order` (OrderPortal) and `cancel_lock` (AdManager)
+    are permissionless after deadline. Refunds via pull-payment
+    escrow, unwinds maker `ad.locked` back into ad balance.
+    Nullifier never consumed — terminal `Cancelled` status alone
+    blocks future unlock.
+  </Card>
+  <Card title="Dispute lifecycle" icon="scale-balanced">
+    `dispute()` posts a bond and moves the order into `Disputed`.
+    `respond_to_dispute()` lets the counterparty add evidence.
+    `resolve_dispute()` pays out per a discrete `DisputeOutcome`
+    enum (`MutualRefund`, `TradeProceeds`, `BridgerForfeit`,
+    `MakerForfeit`).
+  </Card>
+  <Card title="Cross-chain coordination" icon="arrows-cross">
+    Disputes are per-chain at the contract layer. The arbiter
+    issues matching outcomes on both chains. Unresolved disputes
+    fall back to the cancel path after `challenge_deadline`.
+  </Card>
+</CardGroup>
+
+## How agents work
+
+A maker who wants automated liquidity operations:
+
+<Steps>
+  <Step title="Deploy an Agent Account">
+    Soroban: deploy a custom-account contract that implements
+    `__check_auth`. EVM: deploy a per-maker Safe + Safe Module.
+    Either way, the maker is the owner.
+  </Step>
+  <Step title="Set the agent's policy">
+    Owner calls `set_policy(agent_pubkey, policy)` with allowed
+    actions, token whitelist, per-order cap, rate limit, expiry,
+    and revocation flag.
+  </Step>
+  <Step title="Register the agent's BLS pubkey">
+    Owner registers the agent's BLS public key against the
+    Agent Account's address in `BLSKeyRegistry v2`. The agent
+    becomes the maker's BLS-signing identity for trades it has
+    policy authority over.
+  </Step>
+  <Step title="Point ads at the Agent Account">
+    Maker creates ads with `ad_creator = agent_account_address`.
+    The agent can now call `lock_for_order` and produce BLS
+    signatures within policy bounds — without ever holding the
+    maker's wallet key.
+  </Step>
+  <Step title="Rotate keys in one tx">
+    To replace an agent (compromise, software change), the
+    maker adds a new BLS key slot and sets `valid_until` on the
+    old slot. No need to close ads or migrate liquidity.
+  </Step>
+</Steps>
+
+What agents are NOT authorized to do:
+
+- Initiate disputes (`dispute()` requires the maker's owner
+  signature).
+- Modify their own policy (`set_policy` is owner-only).
+- Touch funds outside the maker's ads.
+- Operate beyond `valid_until` or rate-limit ceilings.
+
+## How disputes work
+
+The order lifecycle expands from `None → Open → Filled` to
+include two new branches:
+
+```
+None → Open → Filled                    (happy path, unchanged from Phase 2)
+       Open → Cancelled                 (timeout-based unwind after deadline)
+       Open → Disputed → Resolved       (challenge path before deadline)
+```
+
+The dispute window:
+
+- Disputes can be raised on either chain when the order is in
+  `Open` state on that chain, **before** the route's deadline.
+- After deadline, the cancel path takes over — no arbiter needed.
+- The bond + arbiter judgement deters frivolous early disputes;
+  the system self-regulates on incentives.
+
+`DisputeOutcome` enum covers the four real-world resolutions:
+
+| Outcome | Source side (OrderPortal) | Destination side (AdManager) |
+|---|---|---|
+| `MutualRefund` | Bridger refunded | `ad.locked -= ad_amount` (back into ad balance) |
+| `TradeProceeds` | Bridger's deposit → maker's recipient | Maker's locked balance → bridger's recipient |
+| `BridgerForfeit` | Bridger's deposit → maker (forfeit) | `ad.locked -= ad_amount` |
+| `MakerForfeit` | Bridger refunded | Maker's locked balance → bridger's recipient |
+
+The arbiter is responsible for issuing matching outcomes on both
+chains. Off-chain coordination keeps the two halves consistent.
+
+## Disputes and the BLS auth circuit
+
+The standalone Noir BLS auth circuit shipped in
+[Phase 2](/reference/architecture/phase-2-bls-auth) earns its
+keep here. A counterparty defending a dispute can submit a ZK
+proof attesting "I had a valid aggregated BLS authorization for
+this trade" — verifiable on-chain via the existing UltraHonk
+verifier — without having to publish the raw aggregated
+signature off-chain. The arbiter sees a portable cryptographic
+claim instead of asking for screenshots.
+
+## What users see differently
+
+<CardGroup cols={2}>
+  <Card title="Set up an agent" icon="gear">
+    Makers who want automation deploy an Agent Account once,
+    install an agent's policy, and register the agent's BLS key.
+    Subsequent trades flow through the agent automatically.
+  </Card>
+  <Card title="Cancel stuck orders" icon="rotate-left">
+    Past the deadline, anyone can poke `cancel_order` /
+    `cancel_lock` to unwind a stuck order. Refunds accrue to the
+    pull-payment escrow; recipient claims via `claim()`.
+  </Card>
+  <Card title="Open a dispute" icon="scale-balanced">
+    A counterparty who suspects foul play before deadline can
+    post a bond and submit evidence. The other side responds; an
+    arbiter reviews and resolves.
+  </Card>
+  <Card title="14-day testnet stability" icon="chart-line">
+    Phase 3 closes with a 14-day public soak — agent runtime
+    handling automated locking, scripted dispute scenarios
+    exercising the challenge paths, public dashboard tracking
+    all of it.
+  </Card>
+</CardGroup>
+
+## What ships next
+
+<Card title="Phase 4 — Mainnet Launch" icon="arrow-right" href="/reference/architecture/phase-4-mainnet">
+  Stellar + Ethereum mainnet deploy, admin and ArbiterRole both
+  hand off to multisigs, 24-hour timelock on critical admin
+  actions, protocol fee mechanism (0.5% bridge fee), USDC ↔
+  USDC launch route, cross-chain reconciliation listener.
+</Card>
