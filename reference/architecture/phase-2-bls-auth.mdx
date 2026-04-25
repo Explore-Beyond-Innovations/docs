@@ -1,58 +1,51 @@
 ---
 title: "Phase 2 — BLS Auth & Pre-auth Retirement"
-sidebarTitle: "Phase 2 — BLS Auth"
+sidebarTitle: "BLS Auth"
 description: "BLS-only authentication replaces the pre-auth relayer. Both parties sign the order once; one aggregated signature gates both unlocks."
 ---
 
 <Note>
-  🔨 **Status: planned (T1 of the SCF Build Award).** Designed,
-  not yet shipped. Replaces the pre-authorization relayer with
-  on-chain BLS aggregate verification and lands several
-  defensive contract changes in the same cutover.
+  🔨 **Planned for T1.** Designed, not yet shipped. Replaces the
+  pre-authorization relayer with on-chain BLS aggregate verification
+  and lands several defensive contract changes in the same cutover.
 </Note>
 
-Phase 2 removes the largest live trust assumption in Phase 1 —
-the manager-signing relayer — and replaces it with a stateless
-authorization model where the two counterparties on a trade are
-the only signers gating their own settlement.
+<Warning>
+  This is the **blueprint** for T1, not final source. Field names,
+  API signatures, and storage layout may shift during implementation
+  and audit. The cryptographic shape (BLS12-381 aggregation, route
+  commitment, leaf-side binding, pre-auth removal) is locked.
+</Warning>
+
+Phase 2 removes the largest live trust assumption in Phase 1 — the
+manager-signing relayer — and replaces it with a stateless
+authorization model where the two counterparties on a trade are the
+only signers gating their own settlement.
 
 ## Architecture diagram
 
-<img src="/reference/architecture/_diagrams/phase-2-bls-auth.svg" alt="Phase 2 architecture — BLS auth, pre-auth retired" />
+<img src="/reference/architecture/_diagrams/phase-2-bls-auth.png" alt="Phase 2 architecture — BLS auth, pre-auth retired" />
 
-Compared to [Phase 1](/reference/architecture/current-state):
+## Delta from Phase 1
 
-- The trusted **Relayer** actor is replaced by a stateless
-  **Aggregator** with no on-chain authority.
-- A new **`BLSKeyRegistry`** contract holds each user's BLS
-  public key.
-- A standalone **BLS Auth Circuit** (Noir, BLS12-381) ships as a
-  building block for off-chain proof-backed auth — used in later
-  phases for agent attestations and dispute evidence, not on the
-  unlock path itself.
-- `MerkleManager` leaves are now **side-bound** —
-  `poseidon2(orderHash, sideFlag)` — closing the X-1 attack
-  surface where a local-chain leaf could satisfy a counterpart-
-  chain proof.
-
-## What changes at the contract layer
+What changes vs [Phase 1](/reference/architecture/current-state):
 
 <CardGroup cols={2}>
   <Card title="Pre-auth gone" icon="circle-xmark">
     `_consumeAuth`, `managers[]`, `requestTokens[]`, and the
-    `signature / authToken / timeToExpire` parameters are
-    removed from every state-changing entry point on both
-    `AdManager` and `OrderPortal`.
+    `signature / authToken / timeToExpire` parameters are removed
+    from every state-changing entry point on both `AdManager` and
+    `OrderPortal`.
   </Card>
   <Card title="BLS verification on `unlock`" icon="key">
     Each `unlock` does one native pairing check
     (`env.crypto().bls12_381().pairing_check` on Soroban,
-    `BLS12_PAIRING_CHECK` precompile on EVM) against the
-    aggregated maker + bridger signature.
+    `BLS12_PAIRING_CHECK` precompile on EVM) against the aggregated
+    maker + bridger signature.
   </Card>
   <Card title="`BLSKeyRegistry`" icon="address-book">
-    Maps each wallet to a registered BLS public key, with
-    Proof-of-Possession enforced at registration to prevent
+    New contract. Maps each wallet to a registered BLS public key,
+    with Proof-of-Possession enforced at registration to prevent
     rogue-key attacks. Single key per address in T1; a multi-key
     upgrade lands in Phase 3.
   </Card>
@@ -61,45 +54,41 @@ Compared to [Phase 1](/reference/architecture/current-state):
     Future admin route changes don't reach into existing ads —
     closes the admin-compromise → fake-token-route drain vector.
   </Card>
-  <Card title="Pausability" icon="pause">
-    Every state-changing entry point gains a `whenNotPaused`
-    guard. Admin-only `pause()` / `unpause()` for emergency
-    response.
+  <Card title="Side-bound MMR leaves" icon="layer-group">
+    `MerkleManager` leaves are now `poseidon2(orderHash, sideFlag)`,
+    closing the X-1 attack surface where a local-chain leaf could
+    satisfy a counterpart-chain proof.
   </Card>
-  <Card title="Two-step admin transfer" icon="arrows-spin">
-    `AccessControlDefaultAdminRules` on EVM, `pending_admin` /
-    `accept_admin` on Soroban. Eliminates the wrong-address
-    admin-transfer footgun.
+  <Card title="Pause + 2-step admin" icon="pause">
+    `whenNotPaused` guard on every state-changing entry point.
+    Two-step admin transfer (`AccessControlDefaultAdminRules` on
+    EVM, `pending_admin / accept_admin` on Soroban) eliminates the
+    wrong-address transfer footgun.
   </Card>
 </CardGroup>
 
-## What gets signed (the auth payload)
+## What gets signed
 
 Both parties sign the **OrderData struct** — the same 15-field
 EIP-712 Order from Phase 1. No additional fields, no domain-tag
-prefix, no per-chain variation. The orderHash is byte-identical
-on both chains by construction, so a single signature verifies
-on either side.
+prefix, no per-chain variation. The orderHash is byte-identical on
+both chains by construction, so a single aggregated signature
+verifies on either side:
 
 ```text
-authMessage = orderHash    // EIP-712 digest of the OrderData struct
-sig_aggregate = sigMaker + sigBridger    // G1 point addition
-pk_aggregate  = pkMaker  + pkBridger    // G2 point addition
+authMessage  = orderHash                     // EIP-712 digest of the OrderData struct
+sigAggregate = sigMaker + sigBridger         // G1 point addition
+pkAggregate  = pkMaker  + pkBridger          // G2 point addition
+
+// Pairing check on each chain's `unlock`:
+e(sigAggregate, G2_generator) == e(H_to_G1(orderHash), pkAggregate)
 ```
 
-The `unlock` pairing check on each chain:
+Total signatures per trade: **2** (one per user). Users sign once;
+the aggregate is reused at both `AdManager.unlock` and
+`OrderPortal.unlock`.
 
-```text
-e(sig_aggregate, G2_generator) == e(H_to_G1(orderHash), pk_aggregate)
-```
-
-Total signatures per trade: **2** (one per user). One aggregated
-signature, used at both `AdManager.unlock` and
-`OrderPortal.unlock`. Users sign once.
-
-## Curves and primitives
-
-ProofBridge runs **two curves**, each chosen for its purpose:
+## Curves at a glance
 
 | Concern | Curve | Why |
 |---|---|---|
@@ -108,48 +97,12 @@ ProofBridge runs **two curves**, each chosen for its purpose:
 
 The two curves don't compose at the contract layer in T1 — the
 deposit proof and the BLS verification are independent gates on
-`unlock`. Composition (a single combined proof) is a long-term
-optimization, deferred to a follow-up tranche.
+`unlock`. A combined proof is a long-term optimization tracked in
+[Phase 5](/reference/architecture/phase-5-followups).
 
-## The relayer becomes an aggregator
-
-Once pre-auth signing is gone, the backend service in front of
-the contracts collapses into a pure aggregator:
-
-- It collects BLS signatures from both parties off-chain after
-  both deposits commit.
-- It aggregates the two signatures.
-- It submits `unlock` calls on both chains using the aggregate.
-
-It cannot redirect funds, cannot authorize anything its
-predecessor used to authorize, and cannot block anyone else from
-performing the same aggregation. Multiple aggregators can race
-to submit the same `unlock` calldata; first one wins, no
-permission check. The "trusted relayer" model is over.
-
-## What users see differently
-
-<CardGroup cols={2}>
-  <Card title="Register a BLS key once" icon="user-plus">
-    First time a wallet connects, the user signs a fixed domain
-    message with their wallet to derive a BLS keypair, then
-    registers the public key on each chain via a one-time tx.
-    No registry call needed afterwards.
-  </Card>
-  <Card title="Sign each order with BLS" icon="signature">
-    Bridger and maker each sign the order's EIP-712 hash with
-    their BLS key after both deposits commit. The frontend
-    handles this; users see a single signature prompt per side.
-  </Card>
-  <Card title="No pre-auth round-trip" icon="bolt">
-    Order creation and lock-for-order calls go directly to chain.
-    No "fetch pre-authorization" step before each tx.
-  </Card>
-  <Card title="Faster mental model" icon="brain">
-    "Both parties sign, both chains settle" is shorter than the
-    Phase 1 model that included a third trusted party.
-  </Card>
-</CardGroup>
+A standalone Noir BLS auth circuit also ships in T1 as a building
+block — used in later phases for agent attestations and dispute
+evidence, not on the unlock path itself.
 
 ## What ships next
 

@@ -1,127 +1,65 @@
 ---
 title: "Phase 1 — Pre-auth MVP (live on testnet)"
-sidebarTitle: "Phase 1 — Pre-auth MVP"
+sidebarTitle: "Pre-auth MVP"
 description: "What ProofBridge looks like today: stateful pre-auth relayer, on-chain Poseidon2 MMR per chain, ZK-proof-gated unlocks, single-key admin."
 ---
 
 <Note>
-  ✅ **Status: live.** This phase is deployed on Sepolia ↔ Stellar
-  Testnet. Real bridge transactions settle end-to-end through
-  this architecture today. Phases 2–4 build on top of it; Phase 5
-  decentralizes it further.
+  ✅ **Live on Sepolia ↔ Stellar Testnet.** Real bridge transactions
+  settle end-to-end through this architecture today. Subsequent
+  phases incrementally retire trust assumptions on top of it.
 </Note>
 
-Phase 1 is the protocol as it actually runs right now. The
-trust-minimization story is already half done — funds never leave
-contract escrow except via a verified ZK proof — but a
+Phase 1 is the protocol as it actually runs right now. Funds never
+leave contract escrow except via a verified ZK proof — but a
 pre-authorization relayer sits in front of every state-changing
-call as transitional scaffolding.
+call as transitional scaffolding while the BLS-based end-state is
+being built.
 
 ## Architecture diagram
 
-<img src="/reference/architecture/_diagrams/phase-1-current-state.svg" alt="Phase 1 architecture — Pre-auth MVP" />
+<img src="/reference/architecture/_diagrams/phase-1-current-state.png" alt="Phase 1 architecture — Pre-auth MVP" />
 
-## Actors
+Refer to the protocol overview pages for the actor definitions,
+the 12-step settlement flow, and the per-contract function reference:
 
-<CardGroup cols={2}>
-  <Card title="Maker" icon="droplet">
-    Liquidity provider. Funds an `AdManager` ad on the destination
-    chain, locks against incoming orders, receives the bridger's
-    deposit on the source chain after settlement.
+<CardGroup cols={3}>
+  <Card title="Makers & Bridgers" icon="users" href="/concepts/makers-and-bridgers">
+    The two end-user roles.
   </Card>
-  <Card title="Bridger" icon="arrow-right-arrow-left">
-    Cross-chain user. Deposits to `OrderPortal` on the source
-    chain, receives the maker's locked tokens on the destination
-    chain after settlement.
+  <Card title="How it works" icon="circle-info" href="/how-it-works">
+    The 12-step cross-chain flow as it runs today.
   </Card>
-  <Card title="Relayer" icon="server">
-    Stateful coordinator. Pre-authorizes every state-changing call
-    by signing a request hash with a manager key. Cannot redirect
-    funds — the ZK proof is still required for unlock — but is the
-    protocol's liveness bottleneck.
-  </Card>
-  <Card title="Admin" icon="key">
-    Single-key role on each chain. Configures supported chains,
-    token routes, and managers. No timelock, no multisig in code.
+  <Card title="Smart contracts" icon="file-code" href="/reference/smart-contracts">
+    Function signatures, storage, and deployed testnet addresses.
   </Card>
 </CardGroup>
 
-## Protocol contracts
-
-Both chains carry the same contract shape — Soroban / Rust on
-Stellar, Solidity / Foundry on Ethereum — with identical EIP-712
-order hashing semantics so a single ZK proof can settle both
-sides.
-
-| Contract | Role |
-|---|---|
-| `AdManager` | Maker-side escrow. Holds liquidity ads. Maker calls `createAd`, `fundAd`, `lockForOrder`, `unlock`. |
-| `OrderPortal` | Bridger-side escrow. Bridger calls `createOrder` to deposit, `unlock` to settle. |
-| `MerkleManager` | Append-only Poseidon2 MMR. `MANAGER_ROLE` (held by `AdManager` and `OrderPortal`) appends order hashes. |
-| `Verifier` | UltraHonk on BN254 with keccak Fiat-Shamir. Verifies the deposit proof on-chain. |
-| `wNativeToken` | Wraps the chain's native asset (ETH, XLM) so bridging works through the same ERC-20-style interface. |
-
-See [Smart Contracts](/reference/smart-contracts) for the function
-signatures and the deployed testnet addresses.
-
-## What works today
-
-- **Two active bridge routes** on testnet: ETH (Sepolia) ↔ wETH
-  (Stellar) and XLM (Stellar) ↔ wXLM (Sepolia). A ProofBridge
-  test-token route (PB-EVM ↔ PB-Stellar) is also live for
-  integration testing.
-- **The 12-step cross-chain flow** described in
-  [How it works](/how-it-works) runs end-to-end against real
-  testnet contracts.
-- **Cross-chain digest invariant**: a 15-field `Order` struct
-  hashes to byte-identical EIP-712 digests on Stellar and
-  Ethereum, so one ZK proof settles both sides.
-- **Append-only MMR** on each chain with Poseidon2 hashing —
-  the same hash function used inside the Noir circuit, so the
-  on-chain root is directly referenceable as a public input.
-- **Auto-merchant bot** runs against a ProofBridge admin wallet on
-  each chain, auto-locking incoming orders so testnet bridgers
-  never hit a "no merchant answered" dead end.
-
 ## What's transitional
 
-This is the part Phase 2 retires. Three pieces of scaffolding
-live in the current architecture only because the trustless
-end-state isn't fully shipped yet:
+Three pieces of scaffolding live in this phase only because the
+trustless end-state isn't fully shipped yet — Phase 2 retires the
+first, Phase 4 retires the second, and the third is a documentation
+nuance:
 
 - **Pre-auth signing.** Every state-changing user call carries a
-  manager-signed request hash. The relayer's manager key is
-  whitelisted in `managers[]`, gating the call. A compromised
-  manager key can authorize any user request, though it still
-  cannot redirect funds without a valid ZK proof.
-- **Single-key admin** on each chain. `setChain`,
-  `setTokenRoute`, `setManager`, and role grants on
-  `MerkleManager` all execute instantly with no delay or multisig.
-- **Native-token wrapping** uses an internal `wNativeToken`
-  contract via a sentinel address. The protocol-level claim of
-  "native handled directly" is an aspirational simplification of
-  what the contracts actually do today.
+  manager-signed request hash. A compromised manager key can
+  authorize any user request — though it still cannot redirect funds
+  without a valid ZK proof. Retired in [Phase 2](/reference/architecture/phase-2-bls-auth).
+- **Single-key admin** on each chain. `setChain`, `setTokenRoute`,
+  `setManager`, and role grants execute instantly with no delay or
+  multisig. Replaced by multisig + 24h timelock in [Phase 4](/reference/architecture/phase-4-mainnet).
+- **Native-token wrapping** uses an internal `wNativeToken` contract
+  via a sentinel address. The "native handled directly" story is an
+  aspirational simplification of what the contracts actually do today.
 
-## Trust assumptions
-
-| Assumption | Why it holds today | What changes later |
-|---|---|---|
-| Relayer cannot redirect funds | ZK proof verification gates every `unlock` | Pre-auth path retired in Phase 2 |
-| Funds locked in escrow are recoverable only via valid proof | Nullifier + EIP-712 binding + MMR inclusion proof | Unchanged through all phases |
-| Admin acts in good faith on `setTokenRoute`, `setChain` | Single-key + no on-chain check | Phase 2 adds route-commitment defense; Phase 4 adds 24h timelock + multisig |
-| Manager key is honest about which user requests to sign | Trust scaffolding while BLS is being built | Phase 2 retires this entirely |
-
-## Active testnet deployments
-
-The currently-deployed contract addresses on Sepolia and Stellar
-Testnet are listed at
-[`/reference/smart-contracts`](/reference/smart-contracts).
+For the full set of trust assumptions and how each phase shrinks
+them, see the [security model](/reference/security-model).
 
 ## What ships next
 
 <Card title="Phase 2 — BLS Auth & Pre-auth Retirement" icon="arrow-right" href="/reference/architecture/phase-2-bls-auth">
   Both Maker and Bridger sign the order with BLS once; one
   aggregated signature gates both `unlock` calls. The pre-auth
-  path is removed entirely. Adds the route-commitment defense,
-  pause primitive, and a standalone Noir BLS auth circuit.
+  path is removed entirely.
 </Card>

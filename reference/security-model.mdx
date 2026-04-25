@@ -10,7 +10,7 @@ ProofBridge is designed so you never have to trust a centralized party with your
 
 Every fund release on ProofBridge passes through the same set of cryptographic gates. The diagram shows what each gate checks and where it gets its inputs:
 
-<img src="/_diagrams/security-gates.svg" alt="Security gates protecting bridge funds" />
+<img src="/_diagrams/security-gates.png" alt="Security gates protecting bridge funds" />
 
 Funds release only when **every** gate passes — EIP-712 binding, BLS aggregate, ZK proof, fresh nullifier, and a still-`Open` order status. If any one check fails the unlock reverts and the deposit stays in escrow.
 

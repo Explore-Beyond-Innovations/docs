@@ -1,239 +1,164 @@
 ---
 title: "Phase 5 — Decentralization & Expansion"
-sidebarTitle: "Phase 5 — Follow-ups"
+sidebarTitle: "Follow-ups"
 description: "Post-mainnet roadmap: DAO governance for the arbiter, agent slashing, additional chains, RWA route partnerships, and protocol-level optimizations."
 ---
 
 <Note>
-  📅 **Status: follow-up tranches.** Out of scope for the current
-  SCF Build Award (T1 + T2 + T3). Two of these — DAO governance
-  and slashing — are large enough to warrant their own scoped
-  initiatives with separate funding. The rest are smaller
-  iterations on the launched protocol.
+  📅 **Follow-up tranches.** Out of scope for the current SCF Build
+  Award (T1 + T2 + T3). Two of these — DAO governance and slashing —
+  are large enough to warrant their own scoped initiatives with
+  separate funding. The rest are smaller iterations on the launched
+  protocol.
 </Note>
 
-Phase 5 collects everything that comes after a successful
-mainnet launch. Two categories of work, distinguished by shape:
+<Warning>
+  This is the **blueprint** for Phase 5, not final source. Tokenomics,
+  staking parameters, slashing penalties, and chain-expansion timing
+  are all subject to ecosystem signal and the first ~3 months of
+  mainnet operational data. The shape (DAO over arbiter, stake-and-slash
+  for agents, scoped per-tranche expansions) is the working plan.
+</Warning>
 
-- **Foundational follow-ups.** DAO governance and agent
-  slashing each change the protocol's authority structure or
-  add a new economic primitive. Both deserve their own design,
-  audit, and funding cycle.
-- **Scoped iterations.** Additional chains, RWA route
-  partnerships, stablecoin / oracle bond pricing, per-route
-  fee tweaks. Config-only or modest contract refactors that
-  ship as small follow-on tranches.
+Phase 5 collects everything that comes after a successful mainnet
+launch — two foundational follow-ups plus several scoped iterations.
 
 ## Architecture diagram (foundational follow-ups)
 
-<img src="/reference/architecture/_diagrams/phase-5-followups.svg" alt="Phase 5 architecture — DAO governance and agent slashing" />
+<img src="/reference/architecture/_diagrams/phase-5-followups.png" alt="Phase 5 architecture — DAO governance and agent slashing" />
 
-Compared to [Phase 4](/reference/architecture/phase-4-mainnet):
+## Delta from Phase 4
 
-- A new **Token Holders** actor + **Governance** contract take
-  over from the Phase 4 multisig as the protocol's decision-
-  making layer.
-- A new **Agent Stake** contract holds collateral that agents
-  must post; slashable on confirmed misbehavior.
-- The existing Agent Account, contracts, registry, and verifier
-  are unchanged — Phase 5 layers governance and stake on top
-  rather than re-architecting the core.
+What changes vs [Phase 4](/reference/architecture/phase-4-mainnet):
 
-## Foundational follow-up A — DAO governance for `ArbiterRole`
+- A new **Token Holders** actor + **Governance** contract take over
+  from the Phase 4 multisig as the protocol's decision-making layer.
+- A new **Agent Stake** contract holds collateral that agents must
+  post; slashable on confirmed misbehavior.
+- The existing Agent Account, contracts, registry, and verifier are
+  unchanged — Phase 5 layers governance and stake on top rather than
+  re-architecting the core.
 
-### Goal
+## Foundational A — DAO governance for `ArbiterRole`
 
-Move the `ArbiterRole` from the 5-of-7 multisig (Phase 4 model)
-to community-elected, stake-weighted governance. Disputes are
-resolved by ProofBridge DAO votes rather than a fixed signer
-set.
-
-### Why DAO governance specifically
-
-The arbiter is the protocol's largest residual trust assumption
-post-Phase 4. A multisig is a meaningful step from single-key
-admin, but the signer set is still chosen by the team. A DAO
-makes the arbiter accountable to actual stakeholders, brings
-the protocol fully into line with the user-driven-consensus
-framing, and creates a credible long-term decentralization
-story.
-
-### Scope
+Move the `ArbiterRole` from the 5-of-7 multisig (Phase 4 model) to
+community-elected, stake-weighted governance. Disputes are resolved by
+ProofBridge DAO votes rather than a fixed signer set.
 
 <CardGroup cols={2}>
   <Card title="Token launch" icon="coins">
-    ProofBridge governance token: supply design, vesting,
-    allocation between team / ecosystem / community / treasury.
-    Distribution mechanism (airdrop, contributor rewards, sale,
-    or some mix). Regulatory + legal review of distribution
-    structure.
+    Governance token: supply design, vesting, allocation between team
+    / ecosystem / community / treasury. Distribution mechanism and
+    regulatory + legal review of the structure.
   </Card>
   <Card title="Staking + voting contracts" icon="layer-group">
-    Token contract on each chain. Staking contract — token
-    holders stake to vote. Governance contract for the proposal
-    lifecycle (propose → discuss → vote → queue → execute), with
-    quorum, veto, and execution semantics.
+    Token contract on each chain. Staking contract — token holders
+    stake to vote. Governance contract for the proposal lifecycle
+    (propose → discuss → vote → queue → execute).
   </Card>
-  <Card title="ArbiterRole transition" icon="arrows-cross">
-    The 5-of-7 Phase 4 multisig is retired. `ArbiterRole`
-    becomes either a governance-controlled signer set (DAO
-    elects N signers periodically) or DAO-direct (proposal +
-    vote = resolution). Direct is simpler but slower.
+  <Card title="`ArbiterRole` transition" icon="arrows-cross">
+    The 5-of-7 Phase 4 multisig is retired. `ArbiterRole` becomes
+    either a governance-controlled signer set (DAO elects N signers
+    periodically) or DAO-direct (proposal + vote = resolution).
   </Card>
   <Card title="Treasury management" icon="building-columns">
-    The `protocol_fee_pool` (admin-controlled in Phase 4)
-    transitions to DAO-controlled. Fee revenue funds the DAO's
-    operations + future development.
+    The `protocol_fee_pool` (admin-controlled in Phase 4) transitions
+    to DAO-controlled. Fee revenue funds the DAO's operations + future
+    development.
   </Card>
 </CardGroup>
 
-### Why it isn't part of the current Build Award
+**Why it isn't in the current Build Award.** Per SCF Build rules,
+tokenomics-related spend is explicitly excluded — so the DAO work
+isn't fundable from the current envelope. It's also a multi-month
+initiative with regulatory dependencies that need to land outside the
+contract design itself. A DAO whose tokens are 100% held by the team
+is theatre — real DAO governance requires distribution to actual
+stakeholders, which itself requires a mainnet-deployed user base whose
+contributions are measurable.
 
-Per SCF Build rules, tokenomics-related spend (token sales,
-giveaways, distribution) is explicitly excluded from Build
-Awards. So the DAO work isn't even fundable from the current
-envelope. It's also a multi-month initiative with its own
-regulatory dependencies that need to land outside the protocol
-contract design.
+## Foundational B — Agent misbehavior slashing
 
-A DAO whose tokens are 100% held by the team isn't
-decentralization, it's theatre. Real DAO governance requires
-distribution to actual stakeholders — which itself requires a
-mainnet-deployed user base whose contributions are measurable.
+Add a stake-and-slash penalty layer for agents that misbehave under
+their custom-account policy.
 
-## Foundational follow-up B — Agent misbehavior slashing
-
-### Goal
-
-Add a stake-and-slash penalty layer for agents that misbehave
-under their custom-account policy.
-
-Today (post-Phase 3), an agent that signs an invalid trade is
-bounded by:
-
-- Custom-account policy caps (`max_per_order`, `max_per_window`,
-  `valid_until`, `revoked`).
-- Maker's `revoke_agent()` instant kill switch.
-- Dispute path's punitive outcomes (`BridgerForfeit` /
-  `MakerForfeit`).
-- Dispute bond (Phase 4 per-route ladder).
-
-What slashing adds: a **separate, recoverable economic penalty**
-beyond "the maker loses the disputed trade". Slashed funds
-flow back into the protocol fee pool or to the dispute winner.
-
-### Scope
+Today (post-Phase 3), an agent that signs an invalid trade is bounded
+by policy caps, the maker's `revoke_agent()` kill switch, dispute
+outcomes (`BridgerForfeit` / `MakerForfeit`), and the per-route
+dispute bond. **What slashing adds**: a separate, recoverable
+economic penalty beyond "the maker loses the disputed trade".
 
 <CardGroup cols={2}>
   <Card title="Stake contract" icon="vault">
     Each agent's operator posts a stake before being authorized.
-    Stake denomination: native, stablecoin, or the governance
-    token (depends on whether DAO governance is live first).
-    Stake size: tied to the agent's policy ceiling
-    (`max_per_window`) or a flat tier.
+    Denomination: native, stablecoin, or governance token (depends on
+    whether DAO governance is live first). Size tied to the agent's
+    policy ceiling (`max_per_window`) or a flat tier.
   </Card>
   <Card title="Slashing logic" icon="gavel">
     Triggered by the arbiter (or DAO post-governance) on
-    `BridgerForfeit` / `MakerForfeit` outcomes naming the
-    agent's account. Slash percentage configurable. Slashed
-    funds destination determined by governance.
+    `BridgerForfeit` / `MakerForfeit` outcomes naming the agent's
+    account. Slash percentage configurable. Slashed funds destination
+    determined by governance.
   </Card>
   <Card title="Withdrawal cooldown" icon="hourglass-half">
-    14-day cooldown between unstake request and withdrawal. A
-    pending slash blocks withdrawal until the dispute resolves.
-    Prevents grief-then-flee patterns.
+    14-day cooldown between unstake request and withdrawal. A pending
+    slash blocks withdrawal until the dispute resolves. Prevents
+    grief-then-flee patterns.
   </Card>
   <Card title="Reentry" icon="arrows-rotate">
-    After a slash, the same operator can re-stake. Slash history
-    is on-chain for forensic purposes; downstream operators can
-    weigh it in their trust decisions.
+    After a slash, the same operator can re-stake. Slash history is
+    on-chain for forensic purposes; downstream operators can weigh it
+    in their trust decisions.
   </Card>
 </CardGroup>
 
-### Why it isn't part of the current Build Award
+**Why it isn't in the current Build Award.** Pre-mainnet we have zero
+data on what agent misbehavior actually looks like. Calibrating
+slashing parameters without that data risks two failure modes — too
+harsh (no one operates agents) or too lenient (no deterrent, just
+extra UX tax). Phase 4's stability data + the first ~3 months of
+mainnet operation give a real evidence base.
 
-Pre-mainnet we have zero data on what agent misbehavior
-actually looks like. Calibrating slashing parameters without
-that data risks two failure modes:
+## Scoped iterations
 
-1. **Too harsh** — agents won't post enough stake, slashes are
-   aggressive, no one operates an agent. Maker retention
-   collapses.
-2. **Too lenient** — slashing is rare and small, doesn't deter
-   misbehavior, just adds engineering complexity and a UX tax.
-
-Phase 4's stability data + the first ~3 months of mainnet
-operation give a real evidence base. Build slashing **against**
-that evidence, not against guesses.
-
-## Scoped iterations (smaller, post-mainnet rollouts)
-
-These ship as small follow-on tranches after mainnet, each
-config-only or a modest contract refactor:
+These ship as small follow-on tranches after mainnet, each config-only
+or a modest contract refactor:
 
 <CardGroup cols={2}>
   <Card title="Additional chains" icon="link">
-    Arbitrum, Base, Optimism, Polygon, Starknet, Solana — each
-    is a contract deployment plus (for non-EVM) circuit work
-    using the existing T1+T2 contract suite. Add one chain at a
-    time as ecosystem readiness allows.
+    Arbitrum, Base, Optimism, Polygon, Starknet, Solana — each is a
+    contract deployment plus (for non-EVM) circuit work using the
+    existing T1+T2 contract suite. Add one chain at a time as
+    ecosystem readiness allows.
   </Card>
   <Card title="RWA route partnerships" icon="briefcase">
-    Franklin Templeton BENJI, Etherfuse CETES, and other
-    Stellar-native real-world assets. Route configuration is
-    just a `set_token_route` admin call once a counterpart
-    asset exists on the other chain.
+    Franklin Templeton BENJI, Etherfuse CETES, and other Stellar-native
+    real-world assets. Route configuration is a `set_token_route`
+    admin call once a counterpart asset exists on the other chain.
   </Card>
   <Card title="Cross-token dispute bonds via oracle" icon="scale-unbalanced">
-    Phase 4's per-route bond config supports this on the storage
-    side; the missing piece is an oracle integration. Build
-    when oracle dependency is justified by observed dispute
-    behavior.
+    Phase 4's per-route bond config supports this on the storage side;
+    the missing piece is an oracle integration. Build when justified
+    by observed dispute behavior.
   </Card>
   <Card title="Per-route fee bps" icon="sliders">
-    Phase 4 ships a flat protocol-wide 20/30 fee split.
-    Per-route configuration is a small refactor of fee storage
-    — useful once route economics diverge enough to matter.
+    Phase 4 ships a flat protocol-wide 20/30 fee split. Per-route
+    configuration is a small refactor of fee storage — useful once
+    route economics diverge enough to matter.
   </Card>
   <Card title="Auth + deposit combined ZK proof" icon="layer-group">
-    Phases 1–4 keep BLS auth and the deposit ZK proof as
-    independent gates. A combined proof is a proof-system
-    optimization motivated only when L2 batching volumes appear.
+    Phases 1–4 keep BLS auth and the deposit ZK proof as independent
+    gates. A combined proof is a proof-system optimization motivated
+    only when L2 batching volumes appear.
   </Card>
 </CardGroup>
 
 ## Sequencing
 
-The two foundational follow-ups (A and B) are **not strictly
-ordered**:
-
-- Slashing can ship under multisig-arbiter authority before
-  DAO governance is live.
-- DAO governance can ship before slashing.
-- Either order works.
-
-The ecosystem signal during the post-launch window (which one
-users / community ask about more, which surfaces real pain
-first) determines priority.
-
-The scoped iterations slot in opportunistically as ecosystem
-partnerships, route demand, or operational data justify them —
-no strict ordering between them.
-
-## Where to read more
-
-<CardGroup cols={2}>
-  <Card title="Roadmap" icon="map" href="/reference/roadmap">
-    Chronological view of the same phases.
-  </Card>
-  <Card title="Phase 4 (mainnet)" icon="arrow-left" href="/reference/architecture/phase-4-mainnet">
-    The launched architecture Phase 5 builds on top of.
-  </Card>
-  <Card title="Comparisons" icon="scale-balanced" href="/concepts/comparisons">
-    How ProofBridge's trust model compares to validator-based
-    bridges — context for why decentralization matters here.
-  </Card>
-  <Card title="Why ProofBridge" icon="lightbulb" href="/why-proofbridge">
-    The problem statement and the protocol's response.
-  </Card>
-</CardGroup>
+The two foundational follow-ups (A and B) are **not strictly ordered**.
+Either order works; ecosystem signal during the post-launch window
+(which one users / community ask about more, which surfaces real pain
+first) determines priority. The scoped iterations slot in
+opportunistically as ecosystem partnerships, route demand, or
+operational data justify them.

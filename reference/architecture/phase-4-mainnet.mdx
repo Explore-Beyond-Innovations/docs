@@ -1,96 +1,75 @@
 ---
 title: "Phase 4 — Mainnet Launch"
-sidebarTitle: "Phase 4 — Mainnet"
+sidebarTitle: "Mainnet"
 description: "Stellar + Ethereum mainnet, admin and arbiter handed off to multisigs, 24h timelock, protocol fee mechanism, USDC ↔ USDC launch route, reconciliation listener."
 ---
 
 <Note>
-  🔨 **Status: planned (T3 of the SCF Build Award).** Designed,
-  not yet shipped. Audit-gated mainnet deployment of the full
-  T1 + T2 contract suite, plus mainnet-only operational
-  primitives (timelock, fees, multisig handoffs).
+  🔨 **Planned for T3.** Audit-gated mainnet deployment of the full
+  T1 + T2 contract suite, plus mainnet-only operational primitives
+  (timelock, fees, multisig handoffs).
 </Note>
 
+<Warning>
+  This is the **blueprint** for T3, not final source. Specific
+  parameter values (fee bps, bond ratios, timelock duration, signer
+  composition) may shift during audit and pre-launch operational
+  review. The shape (multisig admin + arbiter, timelock, fee on
+  unlock, per-route bond config, USDC-only launch) is locked.
+</Warning>
+
 Phase 4 is the production-ready architecture. Most of the heavy
-contract work is already in Phases 1–3; Phase 4's job is to
-harden the operational surface so the protocol can hold real
-mainnet value.
+contract work is already in Phases 1–3; Phase 4 hardens the operational
+surface so the protocol can hold real mainnet value.
 
 ## Architecture diagram
 
-<img src="/reference/architecture/_diagrams/phase-4-mainnet.svg" alt="Phase 4 architecture — Mainnet end-state" />
+<img src="/reference/architecture/_diagrams/phase-4-mainnet.png" alt="Phase 4 architecture — Mainnet end-state" />
 
-Compared to [Phase 3](/reference/architecture/phase-3-agents-disputes):
+## Delta from Phase 3
 
-- **Single-key admin** is replaced by an **Admin Multisig** on
-  each chain. Admin operations flow through a new **Timelock**
-  module with a 24-hour delay before execution.
-- **`ArbiterRole`** moves from "= admin" to its own dedicated
-  **Arbiter Multisig** (5-of-7, 3 team + 4 ecosystem signers).
-- **Protocol fees** become live on `unlock` — 0.2% to the new
-  **Fee Pool**, 0.3% retained as maker LP profit. Funded from
-  the destination payout.
-- **Per-route bond config** in `AdManager`: bond denomination,
-  floor, and bps ratio set per route. USDC bonds for the launch
-  route.
-- A new off-chain **Reconciliation Listener** watches both
-  chains and alerts on settlement discrepancies. Read-only — no
-  on-chain authority.
-- The **launch route** is `USDC ↔ USDC` only. Native-token
-  routes wait for ecosystem partners to issue equivalents
-  cross-chain.
-
-## What changes at the contract layer
+What changes vs [Phase 3](/reference/architecture/phase-3-agents-disputes):
 
 <CardGroup cols={2}>
-  <Card title="Timelock module" icon="clock">
-    24-hour propose → execute delay on every admin operation that
-    can move funds, redirect flows, or change auth gating.
-    Pause / unpause exempt for emergency response. Bootstrap mode
-    lets initial deploy run instantly; `activate_timelock()` is
-    the one-shot irreversible flag flip before multisig handoff.
+  <Card title="Multisig admin + Timelock" icon="users">
+    Single-key admin replaced by an Admin Multisig on each chain
+    (Stellar account-level multi-sig, Gnosis Safe on EVM). Admin
+    operations flow through a new Timelock module with a 24-hour delay.
+    Pause / unpause exempt for emergency response.
   </Card>
-  <Card title="Multisig admin" icon="users">
-    Stellar account-level multi-sig (signer thresholds + weights
-    on the admin's classic account) and Gnosis Safe on EVM.
-    Same M-of-N composition both sides; ≥ 2 non-team signers as
-    a hard launch gate.
+  <Card title="Arbiter Multisig" icon="scale-balanced">
+    `ArbiterRole` moves from "= admin" to its own dedicated 5-of-7
+    multisig (3 team + 4 ecosystem). Quorum of 5 from a 3+4 pool
+    guarantees ≥ 2 non-team signers in any decision by construction.
   </Card>
-  <Card title="ArbiterRole multisig" icon="scale-balanced">
-    5-of-7 separate multisig (3 team + 4 ecosystem). Quorum of
-    5 from a 3-team-4-ecosystem pool guarantees ≥ 2 non-team
-    signers in any decision by construction. Can resolve disputes
-    but not modify protocol state.
-  </Card>
-  <Card title="Protocol fee mechanism" icon="coins">
-    `protocol_fee_bps = 20` (0.2%) and `lp_fee_bps = 30` (0.3%),
-    capped at 100 bps each. Fee deduction happens on
-    `AdManager.unlock`: bridger gets 99.5% of the destination
-    amount, 0.3% stays in the maker's `ad.balance` as LP profit,
-    0.2% routes to `protocol_fee_pool` (admin-set address).
+  <Card title="Protocol fee on `unlock`" icon="coins">
+    `protocol_fee_bps = 20` (0.2%) and `lp_fee_bps = 30` (0.3%), capped
+    at 100 bps each. Bridger nets 99.5% of the destination amount;
+    0.3% stays in the maker's `ad.balance` as LP profit; 0.2% routes
+    to the new Fee Pool.
   </Card>
   <Card title="Per-route bond config" icon="sliders">
-    `BondConfig { bond_token, min_bond, bond_bps }` per route.
-    For USDC ↔ USDC: bond in USDC, floor of 1 USDC, ratio of 50
-    bps (0.5%). Same-token denomination keeps the math
-    unit-clean without an oracle. Future cross-token bonds get
-    oracle integration as a separate enhancement.
+    `BondConfig { bond_token, min_bond, bond_bps }` per route. USDC
+    route launches with bond in USDC, floor of 1 USDC, ratio of 50 bps
+    (0.5%). Same-token denomination keeps the math unit-clean without
+    an oracle.
   </Card>
   <Card title="Reconciliation listener" icon="binoculars">
-    Off-chain HA service, two-region. Watches both chains via
-    private RPC providers, detects settlement discrepancies
-    within a 5-minute SLA, alerts on-call. Read-only — no
-    contract authority.
+    Off-chain HA service, two-region. Watches both chains via private
+    RPC providers, detects settlement discrepancies within a 5-minute
+    SLA, alerts on-call. Read-only — no contract authority.
+  </Card>
+  <Card title="Bootstrap mode" icon="bolt">
+    Initial deploy runs without delay so the admin can wire routes,
+    fees, and roles. `activate_timelock()` is a one-shot irreversible
+    flag flip before multisig handoff.
   </Card>
 </CardGroup>
 
-## How the protocol fee works
+## Fee math at a glance
 
-The fee structure mirrors the pitch deck's revenue model: every
-bridge transaction incurs a flat 0.5% total — 0.3% to the LP
-(the maker), 0.2% to the protocol.
-
-Fees are deducted **destination-side** at `unlock`, from the
+The fee mirrors the protocol's published 0.5% total bridge fee — split
+between the LP and the protocol — deducted destination-side from the
 maker's locked amount:
 
 | Party | Source side | Destination side | Net per trade (1:1 cross-chain) |
@@ -99,105 +78,73 @@ maker's locked amount:
 | Maker | Receives X | Locked balance reduces by 0.997 × X | +0.3% × X |
 | Protocol | — | +0.002 × X to fee pool | +0.2% × X |
 
-The bridger's net cost is 0.5% of the bridged amount. The maker
-earns 0.3% of bridge volume. The protocol takes 0.2%.
-
-Bps values are admin-configurable but timelocked, and capped at
-100 bps each in the contract to bound future admin-key abuse.
+Bps values are admin-configurable but timelocked, and capped at 100 bps
+each in the contract to bound future admin-key abuse.
 
 ## The launch route — USDC ↔ USDC
 
-ProofBridge does **not** issue tokens. T3 launches with one
-production route between two existing token contracts:
+ProofBridge does **not** issue tokens. T3 launches with one production
+route between two existing token contracts:
 
 | Side | Asset | Issuer |
 |---|---|---|
 | Ethereum mainnet | USDC (ERC-20) | Circle |
 | Stellar mainnet | USDC (Stellar Asset Contract) | Circle |
 
-ProofBridge configures the route via `set_token_route` on each
-chain (timelocked); Circle's contracts are unmodified.
-
-Future routes — including any native-token bridging (XLM, ETH)
-— wait for ecosystem partners to issue equivalent assets on the
-counterpart chain. Adding a route post-launch is config-only:
-`set_token_route` + `set_settlement_window` + `set_bond_config`,
-all timelocked admin calls.
+ProofBridge configures the route via `set_token_route` on each chain
+(timelocked); Circle's contracts are unmodified. Future routes —
+including any native-token bridging (XLM, ETH) — wait for ecosystem
+partners to issue equivalents on the counterpart chain. Adding a route
+post-launch is config-only: `set_token_route` + `set_settlement_window` +
+`set_bond_config`, all timelocked admin calls.
 
 ## Mainnet deployment is audit-gated
 
-The SCF Audit Bank engagement runs during T3 and **gates**
-mainnet deployment:
+The SCF Audit Bank engagement runs during T3 and **gates** mainnet
+deployment:
 
 <Steps>
   <Step title="T2 contract code freezes">
-    End of Phase 3 / Tranche 2. T3 contract changes (timelock
-    module, fee mechanism, per-route bond config) are staged in
-    the repo but not yet deployed to mainnet.
+    End of Phase 3 / Tranche 2. T3 contract changes (timelock, fee
+    mechanism, per-route bond config) are staged but not yet deployed.
   </Step>
   <Step title="Audit kickoff">
     Auditors review the full T1 + T2 + T3 contract suite.
   </Step>
-  <Step title="Wave 1 findings closed">
-    Critical / high findings remediated. Audit Bank confirms
-    closure.
+  <Step title="Critical / high findings closed">
+    Audit Bank confirms remediation closure.
   </Step>
   <Step title="Mainnet deployment begins">
-    Deploy contracts, run initial config, activate timelock,
-    hand off admin to multisig.
+    Deploy contracts, run initial config, activate timelock, hand off
+    admin to multisig.
   </Step>
   <Step title="Production routes verified">
-    First-tx ceremony for the USDC route in both directions.
-    Tx hashes recorded on `/reference/smart-contracts`.
-  </Step>
-  <Step title="Public announcement">
-    Frontend + SDK released, public docs go live.
+    First-tx ceremony for the USDC route in both directions. Tx hashes
+    recorded on `/reference/smart-contracts`.
   </Step>
   <Step title="4-week post-launch hardening">
-    Daily uptime reports, bug fixes, audit medium/low
-    remediation, integration partner support, perf tuning.
+    Daily uptime reports, audit medium/low remediation, integration
+    partner support, perf tuning.
   </Step>
 </Steps>
 
 If audit timing slips, mainnet deploy slips. We don't ship a
 known-broken launch.
 
-## Operational surface
-
-Phase 4 introduces several user-visible operational surfaces:
-
-<CardGroup cols={2}>
-  <Card title="Public status page" icon="signal">
-    `status.pfbridge.xyz` shows per-service uptime + runtime
-    stats: Stellar RPC, Ethereum RPC, aggregator, reconciliation
-    listener, backend API, frontend, database.
-  </Card>
-  <Card title="TypeScript SDK" icon="code">
-    `@proofbridge/sdk` v1 — typed clients for both contracts and
-    the backend API. Retry / backoff, rate limits, integration
-    examples.
-  </Card>
-  <Card title="OpenAPI spec" icon="book-open">
-    `api.pfbridge.xyz/openapi.json` — auto-generated from the
-    NestJS decorators. Stable `/v1/*` route prefix.
-  </Card>
-  <Card title="Integration partner kit" icon="puzzle-piece">
-    Sample integrations for wallets and DEXs at
-    `github.com/Explore-Beyond-Innovations/proofbridge-examples`.
-  </Card>
-</CardGroup>
-
 ## Trust model at mainnet
 
-| Assumption | Strength | Defense |
-|---|---|---|
-| Deposits redeemable only via valid proof | Cryptographic | UltraHonk + nullifier + EIP-712 binding (Phase 1) |
-| Counterparties consent before settlement | Cryptographic | BLS aggregate gates `unlock` (Phase 2) |
-| Existing ad routes are immune to admin compromise | Contract invariant | Route commitment per ad (Phase 2) |
-| Rogue admin can't move funds in < 24h | Operational | Timelock + multisig (Phase 4) |
-| Disputes resolve fairly | Bounded human | Multisig arbiter, ≥ 2 non-team, public outcome trail (Phase 4) |
+For the full per-phase trust comparison see the
+[security model](/reference/security-model). At mainnet the residual
+assumptions are bounded by:
 
-The arbiter remains the largest residual trust assumption. Phase 5
+- **Multisig + 24h timelock** on every admin operation that can move
+  funds, redirect routes, or change auth gating.
+- **Separate 5-of-7 arbiter multisig** with ≥ 2 non-team signers
+  guaranteed in every decision.
+- **Cryptographic gates** (BLS aggregate + UltraHonk + nullifier +
+  EIP-712 binding) unchanged from earlier phases.
+
+The arbiter remains the largest residual trust assumption — Phase 5
 addresses it by handing the role to DAO governance.
 
 ## What ships next
