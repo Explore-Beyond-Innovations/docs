@@ -33,6 +33,7 @@ What changes vs [Phase 3](/architecture/phase-3-agents-disputes):
     `ArbiterRole` moves from "= admin" to its own dedicated 5-of-7
     multisig (3 team + 4 ecosystem). Quorum of 5 from a 3+4 pool
     guarantees ≥ 2 non-team signers in any decision by construction.
+    Ecosystem signers are sourced via the Stellar Foundation.
   </Card>
   <Card title="Protocol fee on `unlock`" icon="coins">
     `protocol_fee_bps = 20` (0.2%) and `lp_fee_bps = 30` (0.3%), capped
@@ -132,7 +133,8 @@ assumptions are bounded by:
 - **Multisig + 24h timelock** on every admin operation that can move
   funds, redirect routes, or change auth gating.
 - **Separate 5-of-7 arbiter multisig** with ≥ 2 non-team signers
-  guaranteed in every decision.
+  guaranteed in every decision. We engage the Stellar Foundation
+  to source ecosystem signers for the multisig.
 - **Cryptographic gates** (BLS aggregate + UltraHonk + nullifier +
   EIP-712 binding) unchanged from earlier phases.
 
