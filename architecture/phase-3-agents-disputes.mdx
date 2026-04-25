@@ -10,10 +10,10 @@ description: "Soroban custom-account agents under scoped policies, order deadlin
   plus the multi-key `BLSKeyRegistry` upgrade.
 </Note>
 
-Phase 3 adds two end-user capabilities deferred from earlier phases:
-**automated maker liquidity operations under scoped authority**, and
-**dispute paths for stuck or contested orders**. Both depend on the
-Phase 2 BLS foundation but introduce new on-chain primitives.
+Phase 3 adds two capabilities held back from earlier phases:
+**automated maker liquidity ops under a scoped policy**, and
+**dispute paths for stuck or contested orders**. Both build on the
+Phase 2 BLS foundation and introduce new on-chain primitives.
 
 ## Architecture diagram
 
@@ -122,14 +122,15 @@ disputes; the system self-regulates on incentives.
 The arbiter is responsible for issuing matching outcomes on both
 chains. Off-chain coordination keeps the two halves consistent.
 
-## How the BLS auth circuit earns its keep
+## Using the BLS auth circuit in disputes
 
-The standalone Noir BLS auth circuit shipped in [Phase 2](/architecture/phase-2-bls-auth)
-becomes useful here. A counterparty defending a dispute can submit a
-ZK proof attesting "I had a valid aggregated BLS authorization for
-this trade" — verifiable on-chain via the existing UltraHonk verifier
-— without having to publish the raw aggregated signature off-chain.
-The arbiter sees a portable cryptographic claim instead of asking for
+The standalone Noir BLS auth circuit from
+[Phase 2](/architecture/phase-2-bls-auth) finds its first real use
+here. A counterparty defending a dispute can submit a ZK proof
+attesting "I had a valid aggregated BLS authorization for this trade"
+without publishing the raw aggregated signature off-chain. The
+existing UltraHonk verifier checks the proof on-chain, and the
+arbiter sees a portable cryptographic claim instead of asking for
 screenshots.
 
 ## What ships next

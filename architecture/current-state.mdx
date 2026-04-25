@@ -10,11 +10,10 @@ description: "What ProofBridge looks like today: stateful pre-auth relayer, on-c
   phases incrementally retire trust assumptions on top of it.
 </Note>
 
-Phase 1 is the protocol as it actually runs right now. Funds never
-leave contract escrow except via a verified ZK proof — but a
-pre-authorization relayer sits in front of every state-changing
-call as transitional scaffolding while the BLS-based end-state is
-being built.
+This is the protocol as it runs today. Funds never leave contract
+escrow without a verified ZK proof, but a pre-authorization relayer
+sits in front of every state-changing call as scaffolding while the
+BLS-based end-state is being built.
 
 ## Architecture diagram
 
@@ -37,10 +36,9 @@ the 12-step settlement flow, and the per-contract function reference:
 
 ## What's transitional
 
-Three pieces of scaffolding live in this phase only because the
-trustless end-state isn't fully shipped yet — Phase 2 retires the
-first, Phase 4 retires the second, and the third is a documentation
-nuance:
+Three pieces only exist because the BLS end-state isn't shipped
+yet. Phase 2 retires the first, Phase 4 retires the second, and the
+third is a documentation nuance:
 
 - **Pre-auth signing.** Every state-changing user call carries a
   manager-signed request hash. A compromised manager key can

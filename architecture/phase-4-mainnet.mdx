@@ -10,9 +10,9 @@ description: "Stellar + Ethereum mainnet, admin and arbiter handed off to multis
   (timelock, fees, multisig handoffs).
 </Note>
 
-Phase 4 is the production-ready architecture. Most of the heavy
-contract work is already in Phases 1–3; Phase 4 hardens the operational
-surface so the protocol can hold real mainnet value.
+Phase 4 is the launched mainnet architecture. The bulk of the
+contract work is already in Phases 1–3; Phase 4 hardens the
+operational surface so the protocol can hold real value.
 
 ## Architecture diagram
 
@@ -59,11 +59,11 @@ What changes vs [Phase 3](/architecture/phase-3-agents-disputes):
   </Card>
 </CardGroup>
 
-## Fee math at a glance
+## Fee math
 
-The fee mirrors the protocol's published 0.5% total bridge fee — split
-between the LP and the protocol — deducted destination-side from the
-maker's locked amount:
+The fee mirrors the protocol's published 0.5% total bridge fee, split
+between the LP and the protocol. It's deducted destination-side from
+the maker's locked amount:
 
 | Party | Source side | Destination side | Net per trade (1:1 cross-chain) |
 |---|---|---|---|

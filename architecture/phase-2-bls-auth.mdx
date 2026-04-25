@@ -10,10 +10,9 @@ description: "BLS-only authentication replaces the pre-auth relayer. Both partie
   contract changes in the same cutover.
 </Note>
 
-Phase 2 removes the largest live trust assumption in Phase 1 — the
-manager-signing relayer — and replaces it with a stateless
-authorization model where the two counterparties on a trade are the
-only signers gating their own settlement.
+Phase 2 retires the manager-signing relayer — the largest live
+trust assumption in Phase 1. The two counterparties on a trade
+become the only signers gating their own settlement.
 
 ## Architecture diagram
 
@@ -62,11 +61,10 @@ What changes vs [Phase 1](/architecture/current-state):
 
 ## What gets signed
 
-Both parties sign the **OrderData struct** — the same 15-field
-EIP-712 Order from Phase 1. No additional fields, no domain-tag
-prefix, no per-chain variation. The orderHash is byte-identical on
-both chains by construction, so a single aggregated signature
-verifies on either side:
+Both parties sign the same 15-field EIP-712 `OrderData` struct
+introduced in Phase 1. The orderHash is byte-identical on both
+chains by construction, so one aggregated signature verifies on
+either side:
 
 ```text
 authMessage  = orderHash                     // EIP-712 digest of the OrderData struct
@@ -81,21 +79,23 @@ Total signatures per trade: **2** (one per user). Users sign once;
 the aggregate is reused at both `AdManager.unlock` and
 `OrderPortal.unlock`.
 
-## Curves at a glance
+## Curve choices
+
+ProofBridge uses two curves, each chosen for its job:
 
 | Concern | Curve | Why |
 |---|---|---|
 | BLS signature aggregation + on-chain verification | BLS12-381 | Native Stellar host functions (CAP-0059), native EVM precompile (EIP-2537), 128-bit security, matches the Noir BLS library |
 | Deposit ZK proof (MMR inclusion + nullifier) | BN254 | UltraHonk native; auto-generated verifier (Soroban + Solidity) already deployed in Phase 1 |
 
-The two curves don't compose at the contract layer in T1 — the
+In T1 the two curves don't compose at the contract layer. The
 deposit proof and the BLS verification are independent gates on
 `unlock`. A combined proof is a long-term optimization tracked in
 [Phase 5](/architecture/phase-5-followups).
 
-A standalone Noir BLS auth circuit also ships in T1 as a building
-block — used in later phases for agent attestations and dispute
-evidence, not on the unlock path itself.
+T1 also ships a standalone Noir BLS auth circuit as a building
+block. It isn't on the unlock path itself, but later phases use
+it for agent attestations and dispute evidence.
 
 ## What ships next
 
