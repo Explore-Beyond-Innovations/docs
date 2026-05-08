@@ -64,39 +64,11 @@ ProofBridge is currently deployed on testnet. You can bridge assets between **Et
 
 ## Deployed contract addresses
 
-<Warning>
-  The addresses below are placeholders while we redeploy on both chains. Read the current addresses from the latest build in the [Proofbridge-Contracts GitHub Release](https://github.com/Explore-Beyond-Innovations/ProofBridge/releases/tag/latest) or the repository's `deployed.json` manifest before integrating.
-</Warning>
+The deployed contract addresses for **AdManager**, **OrderPortal**, **MerkleManager**, **Verifier**, and every bridged token on both chains live on the [Smart contracts reference](/reference/smart-contracts#deployed-addresses) page — that page is the single source of truth and stays in sync with the on-chain deployment manifests in the monorepo.
 
-### Ethereum Sepolia (Chain ID: 11155111)
-
-| Contract | Address |
-|---|---|
-| Verifier | `0x0000000000000000000000000000000000000001` |
-| MerkleManager | `0x0000000000000000000000000000000000000002` |
-| AdManager | `0x0000000000000000000000000000000000000003` |
-| OrderPortal | `0x0000000000000000000000000000000000000004` |
-| wNativeToken (WETH) | `0x0000000000000000000000000000000000000005` |
-| wXLM | `0x0000000000000000000000000000000000000006` |
-| ProofBridge Token | `0x0000000000000000000000000000000000000007` |
-
-Verify these contracts on [Sepolia Etherscan](https://sepolia.etherscan.io/).
-
-### Stellar Testnet
-
-Stellar contract IDs (Soroban strkeys) are base32-encoded and start with `C`. They are published in the [Proofbridge-Contracts GitHub Release](https://github.com/Explore-Beyond-Innovations/ProofBridge/releases/tag/latest) alongside the EVM addresses.
-
-| Contract | Contract ID |
-|---|---|
-| Verifier | `CA…PENDING_REDEPLOY` |
-| MerkleManager | `CA…PENDING_REDEPLOY` |
-| AdManager | `CA…PENDING_REDEPLOY` |
-| OrderPortal | `CA…PENDING_REDEPLOY` |
-| wNativeToken (wrapped XLM) | `CA…PENDING_REDEPLOY` |
-| wETH (SEP-41) | `CA…PENDING_REDEPLOY` |
-| ProofBridge Token | `CA…PENDING_REDEPLOY` |
-
-Verify Stellar contracts on [StellarExpert Testnet](https://stellar.expert/explorer/testnet).
+<Card title="View all deployed addresses" icon="file-contract" href="/reference/smart-contracts#deployed-addresses">
+  Sepolia and Stellar Testnet contract IDs with explorer links, plus the Order struct definition and per-contract role.
+</Card>
 
 ## Planned networks
 
