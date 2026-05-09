@@ -38,7 +38,7 @@ ProofBridge matches Bridgers (users who want to transfer assets) with Makers (li
     A Bridger selects an ad and deposits the source-chain token on the OrderPortal contract. This creates a cryptographically signed order.
   </Step>
   <Step title="ZK proof is generated">
-    The relayer generates a zero-knowledge proof attesting that the deposit exists in the on-chain Merkle tree, without revealing private data.
+    The relayer generates a zero-knowledge proof attesting that the deposit exists in the source chain's on-chain Merkle tree — a succinct cross-chain attestation that the destination chain can verify directly.
   </Step>
   <Step title="Both parties receive funds">
     The ZK proof is submitted to both chains simultaneously, releasing the Bridger's destination tokens and the Maker's source tokens trustlessly.

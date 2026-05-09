@@ -70,11 +70,9 @@ Find answers to the most common questions about using ProofBridge. If your quest
   </Accordion>
 
   <Accordion title="Is my transaction private?">
-    Partially. Zero-knowledge proofs ensure that settlement is **correct** — the relayer cannot fabricate a deposit or manipulate trade terms. However, ZK proofs in ProofBridge do not hide your transaction from public view.
+    No. All on-chain data is public — deposit amounts, wallet addresses, order hashes, and MMR roots are visible on the block explorer for both chains.
 
-    All on-chain data is public: deposit amounts, wallet addresses, order hashes, and Merkle roots are visible on the block explorer. What remains private is the secret used to compute your nullifier — this prevents anyone from replaying your proof, but it does not anonymize your activity.
-
-    ProofBridge is not a privacy protocol. It is a correctness protocol.
+    Zero-knowledge proofs in ProofBridge are used for **succinct cross-chain verification**: the destination chain confirms what happened on the source chain by checking a fixed-size proof, with no oracle or validator set in the trust path. See [Zero-knowledge proofs](/concepts/zero-knowledge-proofs) for the full treatment.
   </Accordion>
 
   <Accordion title="What is the Maker's risk?">

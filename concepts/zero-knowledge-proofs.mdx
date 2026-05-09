@@ -1,117 +1,111 @@
 ---
-title: "Zero-knowledge proofs: trustless cross-chain settlement"
+title: "Zero-knowledge proofs for cross-chain verification"
 sidebarTitle: "ZK proofs"
-description: "ZK proofs let ProofBridge verify that a deposit exists on one chain without revealing private data, enabling trustless settlement between counterparties."
+description: "ProofBridge uses zk-SNARKs as a succinct, on-chain-verifiable attestation that a deposit on one chain was correctly recorded — so the other chain can act on it directly, without trusting an oracle or validator set."
 ---
 
-When you bridge tokens on ProofBridge, neither you nor the Maker needs to trust each other or the relayer. Instead, settlement is enforced by a **zero-knowledge proof** — a cryptographic guarantee that a deposit happened exactly as claimed, verified directly by smart contracts on both chains.
+ProofBridge uses zk-SNARKs (specifically [UltraHonk](https://aztec.network/) on BN254) as the cryptographic bridge between two chains that cannot read each other's state. The proof is a **succinct, on-chain-verifiable attestation** — the destination chain confirms what happened on the source chain by checking a fixed-size proof, with no oracle, validator committee, or relayer signature in the trust path.
 
-## What ZK proofs do for you
+## What problem ZK proofs solve here
 
-A zero-knowledge proof lets one party prove a statement is true without revealing the underlying data. On ProofBridge, the proof answers one question: *did this specific deposit occur on the source chain, and does it satisfy all the trade constraints?*
+Two practical constraints push ProofBridge toward SNARKs:
 
-The contracts on the destination chain verify the proof automatically. If the proof is valid, funds are released. If it's invalid — or if someone tries to replay an old proof — the transaction reverts. You never need to trust the relayer to behave honestly.
+1. **Each chain can only see itself.** A Soroban contract cannot read Sepolia's Merkle Mountain Range, and an EVM contract cannot read Stellar's. There is no native cross-chain read primitive on either platform. The destination chain has to be *told* what happened on the source chain — by something the chain can verify cryptographically rather than something it has to trust.
+2. **Naive verification is too expensive on-chain.** A direct MMR inclusion proof for a deep tree means dozens of Poseidon2 hashes per verification call. Doing that on-chain on every settlement would burn through Soroban resource budgets and EVM gas. A SNARK compresses the entire MMR-inclusion + order-hash + nullifier check into one fixed-size 14,592-byte proof verified in two pairings plus an MSM.
 
-<Info>
-  ZK proof generation happens in the background. As a user, you simply confirm your deposit transaction and wait. The relayer generates and submits the proof on your behalf.
-</Info>
+The SNARK compresses MMR-inclusion + order-hash + nullifier into one fixed-size object that both Verifier contracts can check directly.
 
-## Why this enables trustless settlement
+## What the proof actually attests
 
-Traditional bridges rely on a trusted committee or validator set to attest that a deposit occurred. If those validators are compromised or collude, funds can be stolen or blocked. ProofBridge replaces that trust assumption with math.
+Each settlement consumes a single proof. The proof's public inputs are visible on-chain on both chains:
 
-The proof is verified by an on-chain `Verifier` contract using the **UltraHonk** proving system on the **BN254** elliptic curve. The verification key is stored in the contract at deployment and cannot be changed. This means:
+| Public input | What it asserts | Visibility |
+|---|---|---|
+| `order_hash` | The exact order being settled (EIP-712 digest of the trade) | Already on-chain — committed to the MMR at deposit time |
+| `target_root` | The MMR root the proof is checked against | Already on-chain — read from `MerkleManager` of the opposite chain |
+| `nullifier_hash` | The one-time-use marker for this settlement | Public output of the proof, recorded on settlement |
+| `ad_contract` | Which side of the trade this proof unlocks (`true` = AdManager / destination, `false` = OrderPortal / source) | Public flag, prevents cross-side replay |
 
-- The relayer cannot fabricate a valid proof for a non-existent deposit.
-- A Maker cannot claim settlement without a matching Bridger deposit.
-- No off-chain authority can block or redirect your funds once a valid proof is submitted.
-
-## The nullifier system
-
-To prevent double-spending, ProofBridge uses a **nullifier** — a one-time cryptographic value derived from your private secret and the order hash.
-
-<Steps>
-  <Step title="Secret generation">
-    When you create an order, a private secret is generated and associated with your trade. This secret never leaves your control and is never stored on-chain in plain form.
-  </Step>
-  <Step title="Nullifier calculation">
-    The nullifier is computed as `poseidon2(secret, orderHashMod)`. The Bridger's nullifier uses one half of the computation; the Maker's uses the other. Each nullifier is unique to a single trade.
-  </Step>
-  <Step title="Proof includes the nullifier">
-    The ZK circuit validates that the nullifier was derived correctly from the secret, and includes it as a public output of the proof.
-  </Step>
-  <Step title="On-chain recording">
-    When the proof is submitted, the contract records the nullifier hash. Any future attempt to submit the same proof — or a different proof with the same nullifier — is rejected.
-  </Step>
-</Steps>
-
-This system guarantees that each deposit can only be claimed once, without the contract ever seeing the underlying secret.
-
-## The proof circuit
-
-ProofBridge's ZK circuits are written in **Noir**, a domain-specific language for zero-knowledge proofs developed by Aztec. The proving system used is **UltraHonk**, which produces compact proofs optimized for on-chain verification.
-
-The deposit circuit validates all of the following in a single proof:
+Given those public inputs, the circuit proves three statements simultaneously:
 
 <AccordionGroup>
-  <Accordion title="Order hash correctness">
-    The circuit checks that the EIP-712 order hash in the proof matches the hash derived from the trade parameters both parties agreed to. This prevents any modification to the trade terms after signing.
-  </Accordion>
   <Accordion title="MMR inclusion">
-    The circuit verifies a Merkle inclusion proof showing that the order hash exists in the source chain's Merkle Mountain Range. This proves the deposit was recorded on-chain without revealing the full tree history.
+    The `order_hash` is included under `target_root` at some position in the Merkle Mountain Range. The circuit recomputes the Poseidon2 hash chain from leaf to root using the prover-supplied sibling and peak hashes. If the recomputed root doesn't match `target_root`, the constraint fails.
+
+    This is the cross-chain attestation: chain A's MMR root is a public on-chain value; the proof says "an order_hash matching the trade is in this tree."
   </Accordion>
-  <Accordion title="Nullifier validity">
-    The circuit confirms that the nullifier was correctly derived from the prover's secret and the order hash, without revealing the secret itself. This is the core privacy guarantee.
+  <Accordion title="Nullifier derivation">
+    The `nullifier_hash` is `poseidon2(secret_half, order_hash)` — whoever produced the proof knew a per-trade `secret` whose halves bind to this specific order. The on-chain contracts record `nullifier_hash` after a successful settlement and reject any future proof carrying the same value, which prevents the same deposit from being claimed twice.
+
+    The `secret` is a uniqueness device — its job is to make each settlement attempt singular and non-replayable.
   </Accordion>
-  <Accordion title="Amount and expiry bounds">
-    The circuit enforces that the transferred amount is within the bounds specified in the order and that the proof is not being submitted after the order has expired.
-  </Accordion>
-  <Accordion title="Chain flag">
-    The circuit includes a chain flag (0 for source chain, 1 for destination chain) to ensure each proof is only valid for its intended contract. This prevents cross-chain replay attacks.
+  <Accordion title="Side binding">
+    The `ad_contract` flag selects which half of the secret is hashed with the order — left half for the destination side, right half for the source side. This means the same proof cannot be replayed in the opposite direction; the AdManager and OrderPortal each accept exactly one of the two valid forms.
   </Accordion>
 </AccordionGroup>
 
-## End-to-end proof flow
+Everything else about the trade — amounts, tokens, sender, recipient — is encoded in `order_hash` and is committed to the MMR via the public EIP-712 struct.
+
+## How the cross-chain flow uses the proof
 
 ```mermaid
 sequenceDiagram
     participant Bridger
     participant OrderPortal as OrderPortal<br/>(source chain)
-    participant MMR as MerkleManager<br/>(both chains)
+    participant MMR_A as MerkleManager<br/>(source chain)
     participant Relayer
     participant Circuit as Noir circuit<br/>(UltraHonk)
     participant AdManager as AdManager<br/>(destination chain)
-    participant Verifier
+    participant Verifier_B as Verifier<br/>(destination chain)
 
-    Bridger->>OrderPortal: Deposit tokens + EIP-712 order
-    OrderPortal->>MMR: Append order hash (source MMR)
+    Bridger->>OrderPortal: Deposit + EIP-712 order
+    OrderPortal->>MMR_A: Append order_hash
+    MMR_A-->>OrderPortal: New root R_A (public on-chain)
     Bridger->>Relayer: Confirm deposit (callback)
-    Relayer->>MMR: Read inclusion proof + roots
-    Relayer->>Circuit: Generate ZK proof<br/>(order, secret, inclusion proof)
-    Circuit-->>Relayer: UltraHonk proof + public inputs
-    Relayer->>AdManager: Submit proof (destination side)
-    AdManager->>Verifier: verify(proof, publicInputs)
-    Verifier-->>AdManager: valid ✓
+    Relayer->>MMR_A: Read R_A + Merkle inclusion path
+    Relayer->>Circuit: Generate proof<br/>(public: R_A, order_hash, nullifier_hash, side flag)
+    Circuit-->>Relayer: 14,592-byte UltraHonk proof
+    Relayer->>AdManager: unlock(proof, public_inputs)
+    AdManager->>Verifier_B: verify(proof, public_inputs)
+    Verifier_B-->>AdManager: valid ✓
     AdManager-->>Bridger: Release destination tokens
-    Relayer->>OrderPortal: Submit proof (source side)
-    OrderPortal->>Verifier: verify(proof, publicInputs)
-    Verifier-->>OrderPortal: valid ✓
-    OrderPortal-->>AdManager: Release source tokens to Maker
 ```
 
-The proof is verified independently on each chain. Both sides settle atomically from the user's perspective — if either verification fails, neither releases funds.
+The destination chain (`AdManager` + `Verifier`) never reads the source chain directly. It receives:
 
-## User experience
+- The source chain's MMR root `R_A` (a public on-chain value, brought across by the relayer).
+- A SNARK proof binding `R_A`, `order_hash`, and `nullifier_hash` together.
 
-From your perspective as a Maker or Bridger, ZK proofs are invisible:
+If the proof verifies, the destination chain has cryptographic evidence that the deposit committed to `R_A` happened. The relayer cannot fabricate a valid proof for a deposit that doesn't exist — because they would have to forge a Merkle inclusion path for a leaf that isn't in the tree, which the SNARK constraints catch.
 
-1. You sign a transaction to deposit or lock tokens.
-2. The relayer detects the on-chain event and requests a proof from the circuit.
-3. The circuit generates the proof, and the relayer submits it to both chains.
-4. The contracts verify the proof and release funds automatically.
+The same proof is then submitted to the source chain's `OrderPortal` (with the `ad_contract` flag flipped) to release the Maker's payout. Two independent verifications of the same statement, one per chain.
 
-You do not need to run any proving software, understand elliptic curve cryptography, or monitor the process. If proof generation or submission fails, the relayer retries automatically.
+## Why UltraHonk specifically
+
+UltraHonk on BN254 was chosen for three reasons:
+
+- **Compact, constant-size proofs.** 456 BN254 scalars (14,592 bytes), independent of circuit size. Fits in a single Soroban transaction.
+- **Cheap on-chain verification.** Two pairings + one G1 multi-scalar multiplication via Soroban's native [BN254 host functions](/reference/soroban-verifier) — and `ecPairing` / `ecMul` / `ecAdd` precompiles on Ethereum.
+- **Same proof bytes verified by both chains.** The `bb` prover produces one proof; both verifiers consume the same bytes against the same SRS. See [Soroban verifier internals](/reference/soroban-verifier) for the full Soroban path and [Smart contracts](/reference/smart-contracts) for the EVM Verifier.
+
+## End-to-end safety from the proof
+
+Because the proof has to verify on-chain on both sides:
+
+- The relayer cannot fabricate a deposit (no Merkle inclusion).
+- A Maker cannot claim settlement without a matching deposit (order_hash mismatch).
+- Neither party can replay an old proof (nullifier already recorded).
+- The proof for one side cannot be reused on the other side (`ad_contract` flag binds the nullifier derivation).
+
+These guarantees come from the on-chain Verifier rejecting the proof if any constraint fails — not from any off-chain authority.
 
 <Warning>
-  BLS signature aggregation — which will allow both parties to co-sign a proof of agreement — is currently in development. Until it ships, the relayer handles proof submission. Funds remain protected by on-chain proof verification regardless.
+  BLS signature aggregation — which will let both counterparties co-sign a proof of agreement so the relayer is no longer the trusted authorizer of trade matching — is on the [roadmap](/reference/roadmap). Funds are protected today by the on-chain proof verification described above; the BLS milestone removes the relayer's role in *initiating* settlement, not in verifying it.
 </Warning>
+
+## Related references
+
+- [Merkle Mountain Range](/concepts/merkle-mountain-range) — how `target_root` is built and why both chains can reproduce the same Poseidon2 hashing.
+- [Order hashing](/concepts/order-hashing) — exact construction of the EIP-712 digest that becomes `order_hash`.
+- [Soroban verifier internals](/reference/soroban-verifier) — the Stellar-side proof-checking pipeline and BN254 host calls.
+- [Smart contracts](/reference/smart-contracts) — Verifier role, addresses, and EVM-side details.

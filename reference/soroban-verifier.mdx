@@ -6,10 +6,6 @@ description: "How the ProofBridge Verifier contract on Stellar (Soroban) verifie
 
 The on-chain `Verifier` on Stellar Testnet is a small Soroban contract that delegates UltraHonk proof verification to an open-source Rust crate. This page documents the implementation end-to-end so it can be audited independently — which BN254 host functions are called, how proofs are parsed, the verifier pipeline, the trusted setup baked into the binary, and the immutability guarantees on the verification key.
 
-<Note>
-  All file paths below are inside the ProofBridge monorepo unless explicitly prefixed with the open-source UltraHonk crate. Line references are pinned to the commit currently deployed on testnet.
-</Note>
-
 ## Source layout
 
 The verifier is split across two crates:
@@ -21,95 +17,46 @@ The verifier is split across two crates:
 
 The contract crate is 139 lines. Every cryptographic operation lives in the external `rs-soroban-ultrahonk` crate, which is open-source and independently auditable.
 
-```toml
-# contracts/stellar/Cargo.toml — workspace dependency pin
-ultrahonk_soroban_verifier = {
-  git = "https://github.com/Explore-Beyond-Innovations/rs-soroban-ultrahonk.git",
-  rev = "d762995d8c181c05fe9a15962793dba6641a79ba"
-}
-```
-
 ## What the contract exposes
 
-```rust
-// contracts/stellar/contracts/verifier/src/lib.rs
-#[contractimpl]
-impl ProofBridgeVerifierContract {
-    /// Constructor — runs once at deploy, stores the VK in instance storage.
-    pub fn __constructor(env: Env, vk_bytes: Bytes) {
-        if load_vk_from_bytes(&vk_bytes).is_none() {
-            panic!("Invalid verification key bytes");
-        }
-        env.storage().instance().set(&Self::key_vk(), &vk_bytes);
-    }
+Three entry points, no admin surface:
 
-    /// Verify a proof. Reads the VK from immutable storage every call.
-    pub fn verify_proof(
-        env: Env,
-        public_inputs: Bytes,
-        proof_bytes: Bytes,
-    ) -> Result<(), VerifierError> {
-        if proof_bytes.len() as usize != PROOF_BYTES { return Err(...); }
-        let vk_bytes: Bytes = env.storage().instance().get(&Self::key_vk()).ok_or(...)?;
-        let verifier = UltraHonkVerifier::new(&env, &vk_bytes).map_err(...)?;
-        verifier.verify(&proof_bytes, &public_inputs).map_err(...)?;
-        Ok(())
-    }
-
-    /// View accessor — anyone can read the VK that was set at deploy.
-    pub fn get_vk(env: Env) -> Option<Bytes> { ... }
-}
-```
-
-There are no admin functions, no upgrade hooks, no role gates. Once `__constructor` runs, the VK is permanent for the lifetime of the contract.
+- `__constructor(vk_bytes)` — runs once at deployment, parses the VK (panicking on malformed input), and writes it into instance storage. There is no setter, no upgrade hook, and no role enum; the VK is permanent for the lifetime of the contract address.
+- `verify_proof(public_inputs, proof_bytes)` — reads the VK from immutable storage, instantiates `UltraHonkVerifier` from the external crate, and forwards the proof and public inputs to it. Returns `Ok(())` on a valid proof, a typed `VerifierError` otherwise.
+- `get_vk() -> Option<Bytes>` — view accessor so anyone can read the deployed VK and diff it against the `bb` artifacts in the monorepo's `circuits/` directory.
 
 ## BN254 host functions used
 
-The UltraHonk pairing-based verifier needs three primitive operations on the BN254 curve: scalar arithmetic in `Fr`, multi-scalar multiplication on G1, and a multi-pairing check. Soroban's `soroban_sdk::crypto::bn254` module exposes all three as native host functions, and the verifier crate calls them directly.
+The UltraHonk pairing-based verifier needs three primitive operations on the BN254 curve: scalar arithmetic in `Fr`, multi-scalar multiplication on G1, and a multi-pairing check. All three are exposed by Soroban's `soroban_sdk::crypto::bn254` module as native host functions.
 
-The two host calls are concentrated in [`ultrahonk-soroban-verifier/src/ec.rs`](https://github.com/Explore-Beyond-Innovations/rs-soroban-ultrahonk/blob/d762995d8c181c05fe9a15962793dba6641a79ba/ultrahonk-soroban-verifier/src/ec.rs):
+There are exactly two host calls in the verifier, both in [`ec.rs`](https://github.com/Explore-Beyond-Innovations/rs-soroban-ultrahonk/blob/d762995d8c181c05fe9a15962793dba6641a79ba/ultrahonk-soroban-verifier/src/ec.rs):
 
 ```rust
-use soroban_sdk::crypto::bn254::{Bn254G1Affine, Bn254G2Affine, Fr};
+// ec.rs:71 — G1 multi-scalar multiplication
+env.crypto().bn254().g1_msm(points, filtered_scalars)
 
-// Multi-scalar multiplication on G1 — used by Shplemini to fold openings.
-pub fn g1_msm(env: &Env, coms: &[G1Point], scalars: &[Fr])
-    -> Result<Bn254G1Affine, &'static str>
-{
-    // ... assemble points + filter zero scalars ...
-    Ok(env.crypto().bn254().g1_msm(points, filtered_scalars))
-}
-
-// Pairing product e(P0, [1]_2) · e(P1, [τ]_2) == 1.
-pub fn pairing_check(env: &Env, p0: &Bn254G1Affine, p1: &Bn254G1Affine) -> bool {
-    let mut g1s: Vec<Bn254G1Affine> = Vec::new(env);
-    g1s.push_back(p0.clone());
-    g1s.push_back(p1.clone());
-    let mut g2s: Vec<Bn254G2Affine> = Vec::new(env);
-    g2s.push_back(rhs_g2_affine(env)); // [1]_2
-    g2s.push_back(lhs_g2_affine(env)); // [τ]_2
-    env.crypto().bn254().pairing_check(g1s, g2s)
-}
+// ec.rs:83 — final Shplonk pairing equation
+env.crypto().bn254().pairing_check(g1s, g2s)
 ```
 
 | Operation | Soroban host call | Where it is used |
 |---|---|---|
 | Scalar arithmetic | `Fr::add` / `mul` / `inv` (host-backed) | Sumcheck rounds, Fiat-Shamir delta computation, Shplemini scalar prep |
-| Multi-scalar multiplication | `env.crypto().bn254().g1_msm(...)` | Shplemini commitment folding (`shplemini.rs:208`) |
-| Pairing product check | `env.crypto().bn254().pairing_check(...)` | Final Shplonk pairing equation (`shplemini.rs:211`) |
+| Multi-scalar multiplication | `env.crypto().bn254().g1_msm(...)` | Shplemini commitment folding ([`shplemini.rs:208`](https://github.com/Explore-Beyond-Innovations/rs-soroban-ultrahonk/blob/d762995d8c181c05fe9a15962793dba6641a79ba/ultrahonk-soroban-verifier/src/shplemini.rs#L208)) |
+| Pairing product check | `env.crypto().bn254().pairing_check(...)` | Final Shplonk pairing equation ([`shplemini.rs:211`](https://github.com/Explore-Beyond-Innovations/rs-soroban-ultrahonk/blob/d762995d8c181c05fe9a15962793dba6641a79ba/ultrahonk-soroban-verifier/src/shplemini.rs#L211)) |
 
-Every BN254 group operation that would otherwise have to be reimplemented in WASM (and would blow past Soroban's instruction budget) is handled by these host calls. The verifier crate **never** implements its own elliptic-curve arithmetic — it uses the host primitives end-to-end.
+Every BN254 group operation that would otherwise have to be reimplemented in WASM is handled by these host calls. The verifier crate never implements its own elliptic-curve arithmetic.
 
 ## Verifier pipeline
 
-The top-level `verify` function in [`verifier.rs`](https://github.com/Explore-Beyond-Innovations/rs-soroban-ultrahonk/blob/d762995d8c181c05fe9a15962793dba6641a79ba/ultrahonk-soroban-verifier/src/verifier.rs) runs six steps:
+The top-level `verify` in [`verifier.rs`](https://github.com/Explore-Beyond-Innovations/rs-soroban-ultrahonk/blob/d762995d8c181c05fe9a15962793dba6641a79ba/ultrahonk-soroban-verifier/src/verifier.rs) runs six steps in order. A proof must pass all six or `verify_proof` returns `VerifierError::VerificationFailed`.
 
 <Steps>
   <Step title="Parse proof bytes">
     `load_proof` decodes the proof into `PROOF_FIELDS = 456` BN254 scalars (14,592 bytes total). Wrong-length proofs return `ProofParseError`.
   </Step>
   <Step title="Validate public inputs">
-    Public inputs must be a multiple of 32 bytes. The verifier subtracts the 16 fixed pairing-point inputs (`PAIRING_POINTS_SIZE`) from the VK's `public_inputs_size` and requires the caller-supplied count to match exactly. Mismatches return `InvalidInput`.
+    Public inputs must be a multiple of 32 bytes. The verifier subtracts the 16 fixed pairing-point inputs (`PAIRING_POINTS_SIZE`) from the VK's `public_inputs_size` and requires the caller-supplied count to match exactly.
   </Step>
   <Step title="Generate Fiat–Shamir transcript">
     `generate_transcript` hashes proof rounds + public inputs into challenges using **keccak** as the random oracle. The proof is generated with `--oracle_hash keccak`, which keeps the on-chain hashing cheap on both EVM and Soroban.
@@ -118,25 +65,18 @@ The top-level `verify` function in [`verifier.rs`](https://github.com/Explore-Be
     `compute_public_input_delta` folds the public inputs into a single `Fr` using the transcript's `beta` / `gamma` challenges. This becomes part of the relation parameters for sumcheck.
   </Step>
   <Step title="Sumcheck">
-    `verify_sumcheck` runs the sumcheck protocol over `CONST_PROOF_SIZE_LOG_N` rounds. Each round checks a degree-bounded polynomial relation against the prover's committed values. Failure → `SumcheckFailed`.
+    `verify_sumcheck` runs the sumcheck protocol over `CONST_PROOF_SIZE_LOG_N` rounds. Each round checks a degree-bounded polynomial relation against the prover's committed values.
   </Step>
   <Step title="Shplemini opening">
-    `verify_shplemini` constructs two G1 points `P0` and `P1` via `g1_msm` (the host MSM), then calls `pairing_check(P0, P1)` (the host pairing). If the equation `e(P0, [1]_2) · e(P1, [τ]_2) == 1` holds, the proof is valid.
+    `verify_shplemini` constructs two G1 points `P0` and `P1` via `g1_msm` (the host MSM), then calls `pairing_check(P0, P1)` (the host pairing). If `e(P0, [1]_2) · e(P1, [τ]_2) == 1`, the proof is valid.
   </Step>
 </Steps>
 
-A proof must pass **all six** stages or `verify_proof` returns `VerifierError::VerificationFailed`. There is no fallback path, no partial-acceptance mode, and no admin override.
-
 ## Trusted setup / SRS
 
-The Shplonk pairing check needs the standard KZG SRS — a G2 generator `[1]_2` and a `[τ]_2` element from a one-shot trusted ceremony. Both are hardcoded as 128-byte constants in [`ec.rs`](https://github.com/Explore-Beyond-Innovations/rs-soroban-ultrahonk/blob/d762995d8c181c05fe9a15962793dba6641a79ba/ultrahonk-soroban-verifier/src/ec.rs):
+The Shplonk pairing check needs the standard KZG SRS — a G2 generator `[1]_2` and a `[τ]_2` element from a one-shot trusted ceremony. Both are hardcoded as 128-byte affine encodings in [`ec.rs` lines 8–28](https://github.com/Explore-Beyond-Innovations/rs-soroban-ultrahonk/blob/d762995d8c181c05fe9a15962793dba6641a79ba/ultrahonk-soroban-verifier/src/ec.rs#L8) (`RHS_G2_BYTES` and `LHS_G2_BYTES`).
 
-```rust
-const RHS_G2_BYTES: [u8; 128] = [ /* [1]_2 affine encoding */ ];
-const LHS_G2_BYTES: [u8; 128] = [ /* [τ]_2 affine encoding */ ];
-```
-
-These are the **same SRS values** used by Aztec's Barretenberg `bb` prover (the prover that produces the proofs the relayer submits) and the same values baked into the auto-generated EVM Solidity verifier at `contracts/evm/src/Verifier.sol`. Identical SRS on both chains means a single proof produced by `bb` is acceptable to **both** the Soroban and the EVM verifier without any rebuilding or re-blinding.
+These are the same SRS values used by Aztec's Barretenberg `bb` prover (the prover that produces the proofs the relayer submits) and the same values baked into the auto-generated EVM Solidity verifier at `contracts/evm/src/Verifier.sol`. Identical SRS on both chains means a single proof produced by `bb` is acceptable to both verifiers without any rebuilding or re-blinding.
 
 <Tip>
   If the SRS ever needed to change (e.g., new prover version), it would require a fresh deployment of the Verifier contract on every chain — there is no on-chain mechanism to rotate it. This is by design: a mutable SRS would mean a mutable trust anchor.
@@ -144,21 +84,14 @@ These are the **same SRS values** used by Aztec's Barretenberg `bb` prover (the 
 
 ## VK immutability
 
-```rust
-pub fn __constructor(env: Env, vk_bytes: Bytes) {
-    if load_vk_from_bytes(&vk_bytes).is_none() { panic!(...); }
-    env.storage().instance().set(&Self::key_vk(), &vk_bytes);
-}
-```
+The contract surface is intentionally minimal:
 
-A few specific properties:
-
-- **Constructor runs exactly once** at contract deploy. Soroban does not re-run constructors on upgrade.
-- **No setter** for the VK exists in the contract surface — `lib.rs` does not expose any function that writes `key_vk` after construction.
+- The **constructor runs exactly once** at deploy. Soroban does not re-run constructors on upgrade, and the contract has no manual `init` function.
+- **No setter** for the VK exists in `lib.rs` — there is no function that writes to the VK storage slot after construction.
 - **No admin role** is recorded. The contract has no `Address` field, no role enum, no migration hook.
-- **VK parsing is enforced at deploy time** — if `load_vk_from_bytes` returns `None`, the constructor panics, the deploy fails, and the contract address is never reachable. There is no path that produces a deployed-but-unconfigured Verifier.
+- **VK parsing is enforced at deploy time.** If `load_vk_from_bytes` returns `None`, the constructor panics, the deploy fails, and the contract address is never reachable. There is no path that produces a deployed-but-unconfigured Verifier.
 
-The VK can be read at any time via `get_vk()`, so anyone can independently verify on-chain that the testnet contract is bound to the expected verification key (matching the `bb` artifacts in [`circuits/`](https://github.com/Explore-Beyond-Innovations/ProofBridge/tree/main/circuits)).
+The VK can be read at any time via `get_vk()`, so anyone can independently confirm the testnet contract is bound to the expected verification key (matching the `bb` artifacts in [`circuits/`](https://github.com/Explore-Beyond-Innovations/ProofBridge/tree/main/circuits)).
 
 ## Same proof, both chains
 
@@ -171,29 +104,13 @@ Because both verifiers consume the same proof bytes against the same VK and the 
 
 ## Cost measurement
 
-The `rs-soroban-ultrahonk` crate ships a [cost-measurement harness](https://github.com/Explore-Beyond-Innovations/rs-soroban-ultrahonk/tree/d762995d8c181c05fe9a15962793dba6641a79ba/scripts/measure_ultrahonk_costs) that submits proofs against a localnet Soroban deployment and records:
-
-- CPU instructions consumed
-- Memory bytes
-- Number of `g1_msm` host calls
-- Number of `pairing_check` host calls
-- Read/write entries
-
-Run it locally:
-
-```bash
-cd scripts/measure_ultrahonk_costs
-npm install
-npm run measure -- --contract-id <SOROBAN_VERIFIER_ID> --network testnet
-```
-
-This is how we validate that a real ProofBridge proof fits inside Soroban's transaction resource limits, and how we'd catch a regression introduced by a future `bb` version.
+The `rs-soroban-ultrahonk` crate ships a [cost-measurement harness](https://github.com/Explore-Beyond-Innovations/rs-soroban-ultrahonk/tree/d762995d8c181c05fe9a15962793dba6641a79ba/scripts/measure_ultrahonk_costs) that submits proofs against a localnet Soroban deployment and records CPU instructions, memory, host-call counts, and read/write entries. It is how we validate that a real ProofBridge proof fits inside Soroban's transaction resource limits, and how a regression introduced by a future `bb` version would be caught.
 
 ## Independent verification checklist
 
 For an auditor asking "is the Soroban verifier actually doing what is claimed?", the steps are:
 
-1. Read [`contracts/stellar/contracts/verifier/src/lib.rs`](https://github.com/Explore-Beyond-Innovations/ProofBridge/blob/main/contracts/stellar/contracts/verifier/src/lib.rs) — confirm it stores the VK once and only forwards to the external crate. (139 lines, no hidden state.)
+1. Read [`contracts/stellar/contracts/verifier/src/lib.rs`](https://github.com/Explore-Beyond-Innovations/ProofBridge/blob/main/contracts/stellar/contracts/verifier/src/lib.rs) — confirm it stores the VK once and only forwards to the external crate. (139 lines, no concealed state.)
 2. Pin the external crate at the rev above and read [`ultrahonk-soroban-verifier/src/ec.rs`](https://github.com/Explore-Beyond-Innovations/rs-soroban-ultrahonk/blob/d762995d8c181c05fe9a15962793dba6641a79ba/ultrahonk-soroban-verifier/src/ec.rs) — confirm the only host calls are `env.crypto().bn254().g1_msm` and `env.crypto().bn254().pairing_check`.
 3. Read [`verifier.rs`](https://github.com/Explore-Beyond-Innovations/rs-soroban-ultrahonk/blob/d762995d8c181c05fe9a15962793dba6641a79ba/ultrahonk-soroban-verifier/src/verifier.rs) — confirm the six-step pipeline above.
 4. Diff `RHS_G2_BYTES` / `LHS_G2_BYTES` against the SRS values used by Aztec `bb` and by the EVM verifier — they must match.

@@ -118,7 +118,7 @@ The scenario below follows a single transfer end-to-end. Each step is what actua
     - Verifies the nullifier is unused.
     - Outputs a compact ZK proof.
 
-    No private data is revealed in the proof — only that the conditions hold.
+    The proof is a succinct attestation that those conditions hold against the source chain's MMR root, so the destination chain can verify it without reading the source chain directly.
   </Step>
   <Step title="Relayer submits the proof to AdManager (destination chain)">
     The relayer calls `AdManager.unlock(proof, ...)` on the destination chain.

@@ -41,7 +41,7 @@ Two additional invariants are enforced at `validateOrder` time on each chain:
 
 ## Nullifiers: preventing double-spending
 
-Every settlement consumes a **nullifier** — a Poseidon2 commitment derived from a private secret and the order hash. Once a nullifier is recorded on-chain, no one can submit another proof for the same order.
+Every settlement consumes a **nullifier** — a Poseidon2 commitment derived from a per-trade secret and the order hash. Once a nullifier is recorded on-chain, no one can submit another proof for the same order.
 
 The Bridger's nullifier is consumed when AdManager releases funds on the destination chain. The Maker's nullifier is consumed when OrderPortal releases funds on the source chain. Both commitments are verified independently, so neither party can replay a proof to extract funds twice.
 
@@ -49,7 +49,7 @@ The Bridger's nullifier is consumed when AdManager releases funds on the destina
 nullifierHash = poseidon2(secret_half, orderHashMod)
 ```
 
-Because the secret is private, the nullifier reveals nothing about the underlying order or the identities of either party. It is purely a one-time-use token that the contract marks as spent.
+The secret is a uniqueness device — its sole purpose is to make each settlement attempt singular and non-replayable.
 
 ---
 
@@ -65,18 +65,18 @@ Settlement on Chain B requires an inclusion proof against Chain A's MMR root. Th
 
 ## Zero-knowledge proofs: the relayer cannot lie
 
-The ZK proof is the core settlement primitive. It proves all of the following simultaneously, without revealing private data:
+The ZK proof is the core settlement primitive. It is a **succinct, on-chain-verifiable attestation** of cross-chain state — the destination chain can confirm what happened on the source chain without reading the source chain directly. The proof binds all of the following together:
 
-- The order hash exists in the MMR of the opposite chain (inclusion proof)
+- The order hash is included under the source chain's MMR root (inclusion proof)
 - The order hash matches the trade parameters (amount, chains, tokens, recipients)
-- The nullifier was computed correctly from a private secret known only to the claimer
-- The proof targets the correct chain (a chain flag is a public input)
+- The nullifier was computed correctly from a per-trade secret known only to the claimer
+- The proof targets the correct side of the trade (a chain flag is a public input)
 
-Because the proof is validated by the Verifier contract on-chain, the relayer cannot manipulate the output. If the relayer submits a proof for a deposit that did not happen, the Verifier will reject it. If the relayer submits a proof with a tampered amount or wrong recipient, the order hash check will fail.
+Because the proof is validated by the Verifier contract on-chain, the relayer cannot manipulate the output. If the relayer submits a proof for a deposit that did not happen, the Verifier rejects it (no valid Merkle path). If the relayer submits a proof with a tampered amount or wrong recipient, the order hash bound into the proof no longer matches.
 
-<Warning>
-  The ZK circuit does not hide the public inputs — the order hash, MMR root, nullifier hash, and chain flag are all visible on-chain. What remains private is the secret used to compute the nullifier.
-</Warning>
+<Note>
+  Every public input to the proof — order hash, MMR root, nullifier hash, chain flag — is visible on-chain on both sides. The only private input is the per-trade secret that gates the nullifier; its job is replay protection. See [Zero-knowledge proofs](/concepts/zero-knowledge-proofs) for the full framing.
+</Note>
 
 ---
 
