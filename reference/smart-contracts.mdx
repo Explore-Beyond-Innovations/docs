@@ -77,6 +77,8 @@ Verifier stores the verification key on-chain and validates the UltraHonk zero-k
 
 You do not call Verifier directly. AdManager and OrderPortal call it internally during each `unlock`.
 
+The Soroban side delegates the inner verification loop to the open-source [`rs-soroban-ultrahonk`](https://github.com/Explore-Beyond-Innovations/rs-soroban-ultrahonk) crate, which calls Soroban's native BN254 host functions (`env.crypto().bn254().g1_msm`, `env.crypto().bn254().pairing_check`) for every elliptic-curve operation. The full implementation walkthrough — host functions, verifier pipeline, SRS, and VK immutability — lives in the [Soroban verifier internals](/reference/soroban-verifier) reference. The EVM side uses Ethereum's `ecMul` / `ecAdd` / `ecPairing` precompiles via an auto-generated Solidity verifier (`contracts/evm/src/Verifier.sol`) consuming the same proof bytes against the same VK.
+
 ---
 
 ## Deployed addresses

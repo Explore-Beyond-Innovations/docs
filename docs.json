@@ -84,6 +84,7 @@
             "group": "Reference",
             "pages": [
               "reference/smart-contracts",
+              "reference/soroban-verifier",
               "reference/recipient-addresses",
               "reference/off-chain-signing",
               "reference/security-model",
