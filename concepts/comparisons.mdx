@@ -1,68 +1,88 @@
 ---
 title: "ProofBridge vs. other cross-chain bridges"
 sidebarTitle: "Comparisons"
-description: "Side-by-side comparison of ProofBridge against Allbridge, Wormhole, Stargate, and LayerZero across custody, validation, and settlement."
+description: "Side-by-side comparison of ProofBridge against CCTP, Houdini Swap, and validator-based bridges (Allbridge, Wormhole, Stargate, LayerZero) across custody, intermediaries, and settlement."
 ---
 
-Most cross-chain bridges share the same structural trade-offs: funds flow through a central pool, validators approve transfers, and users wait for off-chain consensus. ProofBridge takes a different approach — users hold their own assets, the two parties on a trade are the only signers, and settlement is proof-based.
+Cross-chain bridges typically share one of three structural trade-offs: funds flow through a central pool that becomes a honeypot, an external validator set or attestation service approves transfers and becomes a trust assumption, or transactions route through intermediaries the user has to trust. ProofBridge takes a different approach — users hold their own assets in protocol escrow, the two parties on a trade are the only participants, and settlement is gated by an on-chain zero-knowledge proof.
 
-The table below compares the design choices across the protocols we are most often measured against.
+The table below compares the design choices across the protocols ProofBridge is most often measured against.
 
 ## Feature comparison
 
-| Feature | ProofBridge | Allbridge | Wormhole / Stargate / LayerZero |
-|---|:---:|:---:|:---:|
-| User controls assets always | ✅ | ❌ | ❌ |
-| No external validators | ✅ | ❌ | ❌ |
-| Peer-to-peer consensus (BLS) | ✅ | ❌ | ❌ |
-| Zero-knowledge proof verification | ✅ | ❌ | ❌ |
-| User-facing security model | ✅ | ❌ | ❌ |
-| Faster settlement / processing | ✅ | ❌ | ❌ |
+| Feature | ProofBridge | CCTP (coming to Stellar) | Houdini Swap (privacy pools) | Allbridge / Wormhole / Stargate / LayerZero |
+| --- | :---: | :---: | :---: | :---: |
+| User holds custody throughout the transfer | ✅ (self-custodied protocol escrow, unlocked by proof) | ❌ | ❌ (custodied by centralized exchanges mid-swap) | ❌ |
+| Only the two trading parties participate | ✅ | ❌ | ❌ (routes through CEXes + a Monero hop) | ❌ |
+| No external validators, attestors, or intermediaries | ✅ | ❌ (Circle's Iris attestation) | ❌ (centralized exchanges) | ❌ (guardians / relayers / oracles) |
+| Peer-to-peer consensus (BLS) | ✅ | ❌ | ❌ | ❌ |
+| Zero-knowledge proof verification on-chain | ✅ | ❌ | Partial (privacy proofs, not settlement) | ❌ |
+| Censorship-neutral by design | ✅ | ❌ (Circle can refuse to attest) | ❌ (a CEX in the route can refuse the swap) | ❌ (validators can refuse to sign) |
+| Asset coverage | Any ERC-20 / SAC / SEP-41 / native | USDC only | Subset routed through privacy pools | Broad, validator-curated |
+| Settles in minutes | ✅ | ✅ (V2 Fast Transfer: ~30s) | Variable (depends on CEX clearing) | ✅ |
 
 ## What each row means
 
-### User controls assets always
+### User holds custody throughout the transfer
 
-On ProofBridge, a Bridger's deposit lives in the `OrderPortal` contract on the source chain and a Maker's liquidity lives in their own ad inside `AdManager`. Neither is a pooled vault. A compromise of one account does not spread to other users.
+On ProofBridge, a Bridger's deposit lives in the `OrderPortal` contract on the source chain and a Maker's liquidity lives in their own ad inside `AdManager`. Neither is a pooled vault, and neither is held by an operator. A compromise of one account does not spread to other users.
 
-Traditional bridges route every transfer through a shared pool or multisig — a single compromise drains everyone.
+CCTP burns and re-mints USDC under Circle's issuance authority. Houdini Swap routes funds through centralized exchanges mid-swap, so those exchanges custody the assets in transit. Validator-based bridges route every transfer through a shared pool or multisig — a single compromise drains everyone.
 
-### No external validators
+### Only the two trading parties participate
 
-ProofBridge does not depend on a third-party validator set to attest to transfers. In the BLS end-state, the only signers on a trade are the two counterparties themselves.
+A ProofBridge trade has exactly two participants: the Maker and the Bridger. There is no operator entity, no liquidity aggregator, and no centralized routing layer in the path. The contracts enforce the rules; the relayer is a courier that submits proofs and cannot authorize anything.
 
-Allbridge, Wormhole, Stargate, and LayerZero all route transfers through an external validator set (Allbridge's validator network, Wormhole guardians, LayerZero relayers and oracles) that must sign off before funds move. Those validators are a trust assumption and a target.
+Houdini Swap, by contrast, is a swap aggregator — funds pass through centralized exchanges and a Monero hop to achieve privacy. CCTP and validator bridges have their own off-chain machinery (attestation service, guardian set, relayer network) sitting between the two ends.
+
+### No external validators, attestors, or intermediaries
+
+ProofBridge does not depend on a third-party validator set or attestation service. In the BLS end-state, the only signers on a trade are the two counterparties themselves.
+
+- **CCTP** requires Circle's Iris attestation service to sign off before a mint can happen on the destination chain.
+- **Houdini Swap** routes through centralized exchanges, each of which is an intermediary in the trust path.
+- **Allbridge, Wormhole, Stargate, LayerZero** route transfers through an external validator set (Allbridge's validator network, Wormhole guardians, LayerZero relayers and oracles) that must sign off before funds move.
+
+Each of those is a trust assumption and an attack target. ProofBridge replaces them with cryptographic proof.
 
 ### Peer-to-peer consensus (BLS)
 
-ProofBridge settles because the Maker and Bridger co-sign the trade with BLS signatures, aggregated into a single compact proof of agreement. Consensus is between the two parties on the trade — no external quorum.
+ProofBridge settles because the Maker and Bridger co-sign the trade with BLS signatures, aggregated into a single compact proof of agreement. Consensus is between the two parties on the trade — no external quorum, no committee, no aggregator.
 
-### Zero-knowledge proof verification
+### Zero-knowledge proof verification on-chain
 
 Every settlement on ProofBridge includes a ZK proof that the counterparty's deposit is genuinely recorded on-chain (MMR inclusion), that the order hash matches the agreed terms, and that the nullifier has not been used. The on-chain Verifier checks the proof before any funds move.
 
-Other bridges rely on validator attestations rather than cryptographic proofs of deposit.
+ProofBridge uses ZK proofs for **verification, not privacy** — the proof attests to the correctness of the cross-chain state, while order amounts, recipients, and Merkle roots remain public on-chain. Houdini Swap uses zero-knowledge primitives for the opposite purpose: hiding the link between source and destination. CCTP and validator bridges rely on attestations rather than cryptographic proofs of deposit at all.
 
-### User-facing security model
+### Censorship-neutral by design
 
-ProofBridge applies the principle that each user is responsible for their own funds. The protocol itself has no privileged ability to move assets — there is no custodian, no admin key that can release funds, no operator who can redirect flows.
+ProofBridge contracts cannot tell who is behind a wallet, and no party in the protocol can refuse a valid trade. CCTP can refuse to attest a transfer (sanctions, compliance, key compromise). A centralized exchange in a Houdini route can refuse the swap. Validators in a validator-based bridge can refuse to sign.
 
-Custodial bridges invert this: protocol operators have full authority over issuance and release, and users trust that authority won't be abused or compromised.
+### Asset coverage
 
-### Faster settlement / processing
+ProofBridge bridges any ERC-20, Stellar Asset Contract, SEP-41 token, or native asset that a Maker provides liquidity for — including the long tail of anchor-issued Stellar assets. CCTP handles USDC only. Houdini Swap handles the subset of assets its privacy pools route. Validator-based bridges have broad coverage but it is validator-curated.
 
-Traditional bridges wait for multi-validator consensus plus confirmations on both source and destination chains. That is hours to finality on busy networks. ProofBridge removes the validator round-trip entirely — a trade settles as soon as both deposits are proven and both `unlock` calls confirm.
+### Settles in minutes
+
+ProofBridge settles as soon as both deposits are proven and both `unlock` calls confirm — typically a few minutes, faster once the BLS phase removes the relayer round-trip. CCTP's V2 Fast Transfer is sub-minute for USDC. Houdini Swap's timing depends on the centralized exchanges in the route clearing. Validator-based bridges are generally minutes once their quorum signs.
 
 ## Where each approach makes sense
 
-No bridge design is universally best. The table above is specifically about **the security and trust model**, which is what ProofBridge was built to fix.
+No bridge design is universally best. The table above is specifically about **the security and trust model**, which is what ProofBridge was built to address.
 
 <CardGroup cols={2}>
   <Card title="Use ProofBridge when" icon="shield-check">
-    You want to retain custody, you cannot accept a shared-pool honeypot in your threat model, and you need proof-based settlement rather than validator attestation.
+    You want to retain custody of your assets, you cannot accept a shared-pool honeypot, an off-chain attestor, or a centralized-exchange intermediary in your threat model, and you need proof-based settlement. Particularly relevant for the long tail of Stellar assets and for institutional or sanctions-sensitive flows.
+  </Card>
+  <Card title="Use CCTP when" icon="circle-dollar-to-slot">
+    You need USDC↔USDC bridging and Circle's attestation service is acceptable in your trust path. CCTP is the right default for that corridor — deep liquidity, sub-minute settlement on V2 Fast Transfer, low cost. ProofBridge and CCTP serve different problems; both belong in the Stellar ecosystem.
+  </Card>
+  <Card title="Use Houdini Swap when" icon="user-secret">
+    Transactional privacy is a primary requirement — you specifically want to break the on-chain link between source and destination. ProofBridge does not do this; it is a verification protocol, not a privacy protocol.
   </Card>
   <Card title="Validator-based bridges make sense when" icon="network-wired">
-    You need an extremely broad chain coverage today, and your threat model accepts a validator set as a trust anchor. Those bridges ship on more chains faster because adding a validator is cheaper than deploying a full proof system.
+    You need extremely broad chain coverage today and your threat model accepts a validator set as a trust anchor. Those bridges ship on more chains faster because adding a validator is cheaper than deploying a full proof system.
   </Card>
 </CardGroup>
 
@@ -72,11 +92,11 @@ No bridge design is universally best. The table above is specifically about **th
   <Card title="Why ProofBridge" icon="lightbulb" href="/why-proofbridge">
     The problem statement and the protocol's response to it.
   </Card>
+  <Card title="Zero-knowledge proofs" icon="shield-halved" href="/concepts/zero-knowledge-proofs">
+    Why ProofBridge uses ZK for cross-chain verification rather than privacy.
+  </Card>
   <Card title="Security model" icon="shield" href="/reference/security-model">
     Exact trust assumptions under the current pre-auth phase and under BLS.
-  </Card>
-  <Card title="Roadmap" icon="map" href="/reference/roadmap">
-    The path to the BLS end-state and the AI automation layer.
   </Card>
   <Card title="How it works" icon="circle-info" href="/how-it-works">
     The architecture and 12-step cross-chain flow.
