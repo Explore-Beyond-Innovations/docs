@@ -76,7 +76,9 @@
               {
                 "group": "Reference",
                 "pages": [
-                  "v2/reference/smart-contracts"
+                  "v2/reference/smart-contracts",
+                  "v2/reference/bls-verification",
+                  "reference/soroban-verifier"
                 ]
               }
             ]

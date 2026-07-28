@@ -1,0 +1,101 @@
+---
+title: "On-chain BLS verification"
+sidebarTitle: "BLS verification"
+description: "Technical spec: how the aggregated settlement signature is verified natively — EIP-2537 precompiles on Ethereum, BLS12-381 host functions on Soroban"
+---
+
+Every unlock verifies one **aggregated BLS12-381 signature** — the maker's
+and bridger's co-signatures combined — natively on-chain. This page
+specifies exactly what each chain runs. For why the native path was chosen
+over in-circuit verification, see
+[the BLS auth circuit](/v2/concepts/auth-circuit).
+
+## The scheme
+
+**Min-pubkey mode**: public keys live in **G1**, signatures in **G2**
+(the IETF BLS signature variant that keeps registered keys small).
+
+| Object | Wire form (API) | Ethereum native | Soroban native |
+| --- | --- | --- | --- |
+| Public key (G1) | 48 B compressed | 128 B EIP-2537 padded | 96 B uncompressed |
+| Signature / PoP (G2) | 96 B compressed | 256 B EIP-2537 padded | 192 B uncompressed |
+
+Hash-to-curve follows **RFC 9380** (`BLS12381G2_XMD:SHA-256_SSWU_RO`),
+with two domain-separation tags:
+
+- `BLS_SIG_BLS12381G2_XMD:SHA-256_SSWU_RO_POP_` — settlement signatures
+- `BLS_POP_BLS12381G2_XMD:SHA-256_SSWU_RO_POP_` — proofs of possession at
+  key registration
+
+The verification equation on both chains is identical:
+
+```
+e(pk, H(m)) == e(G1, σ)   ⇔   pairing_check([pk, H(m)], [−G1, σ]) == 1
+```
+
+For settlement, `pk` is the **aggregated public key** (the two registered
+keys added in G1) and `m` is the fixed settlement preimage — the domain
+tag, both chain ids, the order hash, and both chains' Merkle roots. One
+pairing check authorizes both traders at once.
+
+## Ethereum: EIP-2537 precompiles
+
+The `BLS` library (`contracts/evm/src/libraries/BLS.sol`) composes the
+check from the [EIP-2537](https://eips.ethereum.org/EIPS/eip-2537)
+precompiles, live on Sepolia since Pectra:
+
+| Precompile | Address | Used for |
+| --- | --- | --- |
+| `BLS12_PAIRING_CHECK` | `0x0f` | the two-pairing verification equation |
+| `BLS12_MAP_FP2_TO_G2` | `0x11` | mapping hashed field elements onto G2 (SSWU + cofactor clearing) |
+| `BLS12_G2ADD` | `0x0d` | combining the two mapped points (RFC 9380 needs `map(u0) + map(u1)`) |
+| `SHA-256` | `0x02` | `expand_message_xmd` inside hash-to-field |
+| `MODEXP` | `0x05` | reducing the expanded bytes into the base field |
+
+Notes:
+
+- The pairing precompile **subgroup-checks every input**, so malformed or
+  wrong-subgroup points revert rather than verify.
+- The same library verifies registration proofs of possession
+  (`BLSKeyRegistry.register`) and the settlement aggregate
+  (`CounterpartyVerifier`).
+- Measured baseline: the full unlock — aggregated-signature check *plus*
+  deposit-proof verification — runs at roughly **2.6M gas** on Sepolia,
+  with a CI gas gate guarding the number.
+
+## Soroban: BLS12-381 host functions
+
+Soroban exposes BLS12-381 natively through
+`env.crypto().bls12_381()`; the contracts call two host functions:
+
+```rust
+let bls = env.crypto().bls12_381();
+let msg_g2 = bls.hash_to_g2(&preimage, &dst);            // RFC 9380, one call
+bls.pairing_check(vec![env, pk_agg, neg_g1],
+                  vec![env, msg_g2, agg_sig])            // the equation above
+```
+
+- `hash_to_g2` performs the entire RFC 9380 pipeline in one host call —
+  no in-contract field arithmetic.
+- `pairing_check` evaluates the multi-pairing product; inputs are
+  `G1Affine` / `G2Affine` (raw uncompressed encodings).
+- The same two calls back both the registry's proof-of-possession check
+  and the `CounterpartyVerifier`'s settlement check.
+- The pairing check completes in **under two seconds** wall-clock inside
+  a single Soroban transaction — Tranche 1's success criterion 4.
+
+## One signature, two encodings
+
+Clients sign once and submit compressed points; each chain's native
+encoding is derived deterministically from the same bytes
+(`@proofbridge/bls-encodings` is the single source for every encoding and
+digest, with cross-chain test vectors asserting byte-for-byte agreement
+between the TypeScript, Solidity, and Soroban implementations).
+
+## Related
+
+- [The BLS auth circuit](/v2/concepts/auth-circuit) — the in-proof
+  alternative and the gas trade-off
+- [Soroban verifier internals](/reference/soroban-verifier) — the deposit
+  proof's BN254 verification path on Stellar
+- [Smart contracts](/v2/reference/smart-contracts) — deployed addresses
