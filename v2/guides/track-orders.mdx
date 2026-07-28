@@ -6,8 +6,8 @@ description: "The orders page, the status ladder, and what each action means"
 The **Orders** page shows every trade you're a party to, split into
 **Pending** and **Completed** tabs.
 
-<Frame caption="The orders page">
-  <img src="/images/v2/orders-01-page.png" alt="Orders page with pending trades" />
+<Frame caption="Pending — a trade waiting on the maker's lock">
+  <img src="/images/v2/orders-01-page.png" alt="Orders page pending tab, waiting for creator" />
 </Frame>
 
 ## The status ladder
@@ -37,8 +37,8 @@ stateDiagram-v2
 | **Aggregating… / Settling…** | background workers at work — nothing to do |
 | **Completed / Claimed** | funds delivered |
 
-<Frame caption="A trade card mid-settlement">
-  <img src="/images/v2/orders-02-card.png" alt="Trade card showing co-sign state" />
+<Frame caption="Completed — every settled trade, both directions">
+  <img src="/images/v2/orders-02-card.png" alt="Orders page completed tab" />
 </Frame>
 
 ## Expired orders
