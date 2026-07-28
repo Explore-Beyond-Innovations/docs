@@ -1,0 +1,41 @@
+---
+title: "Connect a wallet"
+description: "EVM and Stellar wallets, and when you need both"
+---
+
+ProofBridge works with one wallet per chain:
+
+- **EVM** (Sepolia): MetaMask, Rainbow, or any RainbowKit-supported wallet
+- **Stellar** (Testnet): Freighter and other Stellar Wallets Kit wallets
+
+<Frame caption="The wallet hub — connect one or both chains">
+  <img src="/images/v2/connect-01-hub.png" alt="Wallet connection hub" />
+</Frame>
+
+## Which wallets do you need?
+
+The wallet of the chain **you deposit from** is required. Connecting both
+is recommended:
+
+- as a **bridger**, your deposit wallet is on the order chain and your
+  destination address is on the other chain
+- as a **maker**, your liquidity lives on the ad chain and you receive on
+  the order chain
+
+## Sign in
+
+Connecting prompts a one-time login signature (a challenge — no
+transaction, no gas). Linking your second wallet ties both to the same
+account so the app can show all your trades and sponsor key-registration
+gas for either.
+
+<Frame caption="Login signature prompt">
+  <img src="/images/v2/connect-02-login.png" alt="Login challenge signature" />
+</Frame>
+
+<Note>
+Each trading wallet also needs a one-time
+[settlement key registration](/v2/concepts/settlement-keys) before it can
+complete trades — the app prompts you at the right moment, or do it up
+front on the **BLS Keys** page.
+</Note>

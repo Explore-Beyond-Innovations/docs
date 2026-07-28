@@ -55,6 +55,17 @@
                 ]
               },
               {
+                "group": "Guides",
+                "pages": [
+                  "v2/guides/connect-wallet",
+                  "v2/guides/faucet",
+                  "v2/guides/bridge-tokens",
+                  "v2/guides/provide-liquidity",
+                  "v2/guides/manage-ads",
+                  "v2/guides/track-orders"
+                ]
+              },
+              {
                 "group": "Reference",
                 "pages": [
                   "v2/reference/smart-contracts"

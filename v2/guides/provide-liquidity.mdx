@@ -1,0 +1,44 @@
+---
+title: "Provide liquidity"
+description: "The maker flow: ads, locks, and your co-signing duty"
+---
+
+Makers earn the spread by posting **ads** — escrowed liquidity a bridger
+can trade against.
+
+## Before you start
+
+- Wallet connected for the chain your liquidity lives on
+- That wallet's [settlement key](/v2/concepts/settlement-keys) registered —
+  every trade on your ad needs your co-signature
+- Funds for the ad pool
+
+## 1. Create an ad
+
+On **My Ads → Create**, pick the route, set your destination address (where
+you receive on the order chain), the pool amount, and optional min/max
+per-trade limits. Submit the `createAd` transaction from your wallet.
+
+<Frame caption="Ad creation form">
+  <img src="/images/v2/liquidity-01-create.png" alt="Create ad form" />
+</Frame>
+
+## 2. Serve trades
+
+When a bridger opens an order against your ad, the matching slice of your
+pool is reserved. You (or your bot) lock it on-chain, then co-sign after
+both deposits confirm.
+
+<Frame caption="Lock and co-sign actions on an incoming trade">
+  <img src="/images/v2/liquidity-02-lock.png" alt="Lock tokens action" />
+</Frame>
+
+**Running the auto-merchant bot** automates the whole maker side — it
+locks, waits for settlement-grade deposits, and co-signs without you
+touching anything. Manual makers do the same two clicks per trade.
+
+## 3. Get paid
+
+Settlement releases the bridger's deposit to your destination address on
+the order chain. Your ad's remaining pool keeps serving new trades — top
+it up or wind it down any time ([Manage ads](/v2/guides/manage-ads)).
