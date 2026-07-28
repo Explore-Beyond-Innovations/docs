@@ -27,6 +27,33 @@ The `key #NNNN` counter is the **rotation index**: revoking a key advances
 it, so the replacement key is genuinely different (the message changes, so
 the wallet signature changes, so the key changes).
 
+## Registration flow
+
+```mermaid
+sequenceDiagram
+    participant W as Wallet
+    participant App as App
+    participant API as Relayer API
+    participant E as EVM registry
+    participant S as Soroban registry
+
+    App->>API: register/prepare (account, pubkey)
+    API-->>App: per-chain nonces + PoP messages
+    Note over App: BLS-sign each chain's PoP message (silent)
+    App->>API: prepare again (with PoPs)
+    API-->>App: wallet payloads (typed data / message)
+    W->>App: sign authorization(s)
+    App->>API: register (signed legs)
+    API->>E: relay leg, gas sponsored
+    API->>S: relay leg, gas sponsored
+    Note over E,S: proof of possession + owner signature verified on-chain
+    API-->>App: poll status → ✓ registered on both chains
+```
+
+For **Stellar wallets**, the Soroban leg is submitted by the wallet itself
+(a normal Soroban transaction under `require_auth`) instead of being
+relayed; the EVM leg is still relayed and gas-sponsored.
+
 ## Registered on both chains
 
 Registration writes the key's commitment to the `BLSKeyRegistry` on

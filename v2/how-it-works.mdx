@@ -9,6 +9,28 @@ A trade moves through six states:
 Open → Locked → Signed (2/2) → Aggregated → Settling → Filled
 ```
 
+```mermaid
+sequenceDiagram
+    participant M as Maker
+    participant AC as Ad chain<br/>(AdManager)
+    participant R as Relayer<br/>(coordinator)
+    participant OC as Order chain<br/>(OrderPortal)
+    participant B as Bridger
+
+    M->>AC: escrow liquidity (ad)
+    B->>OC: create + fund order
+    M->>AC: lock for order
+    Note over AC,OC: both deposits appended to each chain's MMR — state: Locked
+    M->>R: BLS co-signature σ₁
+    B->>R: BLS co-signature σ₂
+    Note over R: Signed (2/2) → aggregate σ₁+σ₂ → generate deposit proofs
+    R->>AC: unlock (agg sig + proof of order-chain deposit)
+    R->>OC: unlock (agg sig + proof of ad-chain deposit)
+    Note over AC,OC: contracts verify registry keys, pairing, proof, nullifier
+    AC-->>B: bridged funds to bridger's recipient
+    OC-->>M: funds to maker's recipient
+```
+
 ## 1. The maker posts an ad
 
 A maker escrows liquidity in the **AdManager** on their chain and publishes

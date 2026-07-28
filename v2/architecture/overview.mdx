@@ -16,6 +16,33 @@ Deposits into either escrow append to the MMR. Unlocks verify the
 aggregated BLS signature against the registry and the deposit proof
 against the counterparty chain's root.
 
+```mermaid
+flowchart TB
+    M["Maker"]:::actor
+    B["Bridger"]:::actor
+    R["Relayer workers<br/>aggregate · prove · submit"]:::actor
+
+    subgraph CHAIN["Each chain (mirrored on the other)"]
+        AM["AdManager<br/>maker escrow"]
+        OP["OrderPortal<br/>bridger escrow"]
+        MM["MerkleManager<br/>append-only MMR"]
+        REG["BLSKeyRegistry<br/>wallet → settlement key"]
+        CPV["CounterpartyVerifier<br/>BLS pairing check"]
+        V["Verifier<br/>ZK deposit proof"]
+        AM -- "appendOrderHash" --> MM
+        OP -- "appendOrderHash" --> MM
+        AM -- "verify agg sig" --> CPV
+        OP -- "verify agg sig" --> CPV
+        CPV -- "keyOf(party)" --> REG
+        AM -- "verify proof" --> V
+        OP -- "verify proof" --> V
+    end
+
+    M -- "register key · create ad · lock" --> CHAIN
+    B -- "register key · create order" --> CHAIN
+    R -- "submit unlocks (permissionless)" --> CHAIN
+```
+
 ## The relayer: coordinator, not authority
 
 The relayer holds **no funds** and grants **no approvals**. Its jobs:

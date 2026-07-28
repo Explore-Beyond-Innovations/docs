@@ -34,8 +34,15 @@ transaction. Parties sign independently, in any order.
 
 ## The status ladder
 
-```
-Open → Locked → Signed (2/2) → Aggregated → Settling → Filled
+```mermaid
+stateDiagram-v2
+    [*] --> Open: order created
+    Open --> Locked: both escrows committed
+    Locked --> Signed: both parties co-sign (2/2)
+    Signed --> Aggregated: signatures combined into one
+    Aggregated --> Settling: unlocks submitted on both chains
+    Settling --> Filled: both sides claimed
+    Filled --> [*]
 ```
 
 | State | Meaning |

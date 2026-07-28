@@ -4,6 +4,13 @@ sidebarTitle: "Trades"
 description: "Initiate cross-chain trades, retrieve order parameters, lock and unlock funds, and confirm on-chain actions through the ProofBridge Trades API."
 ---
 
+<Note>
+These are the **v1 (pre-BLS)** docs, kept for reference — this page
+describes the retired flow. The current design is under **v2** in the
+version picker.
+</Note>
+
+
 A trade represents a single cross-chain transfer initiated by a Bridger against a Maker's liquidity ad. The trade lifecycle spans two chains: the Bridger deposits tokens on the order chain via the `OrderPortal` contract, and the Maker locks tokens on the ad chain via the `AdManager` contract. Settlement is coordinated by zero-knowledge proofs that unlock funds for both parties simultaneously.
 
 Several trade endpoints return signed contract call data that your application must submit on-chain. After each on-chain transaction is confirmed, call the corresponding `/confirm` endpoint to advance the trade state in the relayer.
