@@ -1,0 +1,39 @@
+---
+title: "Smart contracts"
+description: "Live v2 contract addresses on Stellar Testnet and Ethereum Sepolia"
+---
+
+Addresses of the current v2 deployment. These are the contracts the demo
+trades and the Tranche 1 evidence reference.
+
+## Ethereum Sepolia (chain id 11155111)
+
+| Contract | Address |
+| --- | --- |
+| `AdManager` | `0x4cB5d78DEC7C0fCa2bE10Fb79a7f0d519738729e` |
+| `OrderPortal` | `0xEcC6ea9B07DBB5FF42390e6079035a530d132c85` |
+| `MerkleManager` | `0x2d47cBE433dA8F7D4A044Bae4690A7C08Ec71497` |
+| `BLSKeyRegistry` | `0xcaf22cfF2EE495Bd019ABAa627542486D9Ecd8F1` |
+| `CounterpartyVerifier` (BLS) | `0x08e87A66383298838B0E6BDf08f3fE783E22cD85` |
+| `Verifier` (deposit proof) | `0x6ef0376f3A758A42579a420E48B1f7979a0C0a49` |
+| `Poseidon2Yul` | `0x5529C73F1f318495ECd9703931A09b2F1f699AFD` |
+| `wNativeToken` | `0x38f67fb97b96988b9d5ef3f0f9e0db924780d1ef` |
+| `SCL_EIP6565` (ed25519 verify) | `0x5996657233785f8bf86A4826EB1a062a003c36E9` |
+
+## Stellar Testnet (network id 1000001)
+
+| Contract | Address |
+| --- | --- |
+| `AdManager` | `CC54JAEFONECCRZ3RSVMFMJESA3YD24JSAWIC2OSDMCR4LNCDXIDBWAO` |
+| `OrderPortal` | `CBAFFGNGGQ5UUVUEWRMLLDXB7G5POPOPADTIW6K2XIDKCWVYTKVVGBAC` |
+| `MerkleManager` | `CAKQT76B6X5XZ5VBBMLMA53B2E5LJ5E5XK3R7GDI6EPFIKFBL4JTTFH7` |
+| `BLSKeyRegistry` | `CB7OXQFWWANS5S4ITMS4AG2F6SAPIKD7OV5CSYXEVCU5CQ3ELJXS4NOF` |
+| `CounterpartyVerifier` (BLS) | `CDHCCJMSBQ4ESKB7KAFQJ2XMIV3VOIQTAOKDXWRLL62YQXGUFCMXV45P` |
+| `Verifier` (deposit proof) | `CAJDIDZBM5BG6WRAECJ2YCSKWNMNU55FUIP3SHHZU3ODKKUBNF7H3QXC` |
+| `wNativeToken` | `CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC` |
+
+<Note>
+These are **testnet** deployments. Addresses change on redeploys — this
+page tracks the deployment manifests in the repo, which are the source of
+truth.
+</Note>

@@ -1,0 +1,70 @@
+---
+title: "Quickstart"
+description: "Bridge your first tokens through the BLS-authorized flow"
+---
+
+## Before you start
+
+- **Wallets:** an EVM wallet (MetaMask / Rainbow) on Sepolia and/or a
+  Stellar wallet (Freighter) on Testnet — you need the wallet of the chain
+  you're depositing from.
+- **Test funds:** Sepolia ETH for gas and the token you're bridging; XLM on
+  Stellar Testnet. The in-app faucet covers the test tokens.
+
+## Step 1 — Register your settlement key (once per wallet)
+
+Every trading wallet needs a BLS settlement key registered before it can
+complete a trade. On the **BLS Keys** page:
+
+<Steps>
+  <Step title="Derive">
+    Sign the derivation message. Your key is computed from this signature —
+    it can be regenerated on any device by signing again, so there is
+    nothing to back up.
+  </Step>
+  <Step title="Authorize">
+    Sign the registration authorization. It carries a proof of possession,
+    so nobody can register a key they don't hold.
+  </Step>
+  <Step title="Confirm">
+    The relayer submits the registration to the registries on **both**
+    chains and pays the gas. The page shows ✓ Registered when both legs
+    confirm.
+  </Step>
+</Steps>
+
+<Warning>
+Keys belong to **wallets**, not accounts. If you trade from two wallets
+(one per chain), each wallet registers its own key.
+</Warning>
+
+## Step 2 — Open an order
+
+Pick a route on the Bridge tab, enter the amount, and confirm the deposit
+transaction from your wallet. Your tokens enter the OrderPortal escrow;
+the maker's side locks automatically if their bot is running.
+
+If you close the wallet popup by mistake, the order waits for you on the
+Orders page — **Complete Order** re-serves the same transaction without
+reserving more of the maker's liquidity. Unfunded orders expire after ~30
+minutes and release the reservation.
+
+## Step 3 — Co-sign
+
+When both deposits are confirmed the trade shows **Co-sign**. One click:
+your settlement key signs the trade locally (a single wallet signature
+unlocks the stored key — no transaction). The maker signs their half
+independently.
+
+## Step 4 — Watch it settle
+
+Nothing else to do. The status ladder advances as background workers
+aggregate the signatures, generate the deposit proofs, and submit the
+unlocks on both chains:
+
+```
+Signed (2/2) → Aggregated → Settling → Filled
+```
+
+Your bridged tokens arrive at your recipient address on the destination
+chain. Every transaction is public — the trade page links both unlocks.

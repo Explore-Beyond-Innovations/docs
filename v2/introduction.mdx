@@ -1,0 +1,41 @@
+---
+title: "Introduction"
+description: "ProofBridge v2 — peer-to-peer bridging authorized by both traders' BLS signatures and settled against zero-knowledge deposit proofs"
+---
+
+ProofBridge is a peer-to-peer cross-chain bridge. Two counterparties trade
+directly — a **maker** (liquidity provider) and a **bridger** — and each
+side's funds are escrowed in a contract on its own chain. The flow is
+chain-agnostic; today it runs live on Stellar Testnet and Ethereum Sepolia.
+
+What makes v2 different is who authorizes settlement:
+
+- **The two traders are the authorization.** Every trade is signed by both
+  parties with BLS settlement keys. The two signatures are combined into
+  one, and the contracts on each chain verify that combined signature
+  directly against an on-chain key registry. No trade requires
+  ProofBridge's permission.
+- **Deposits are proven, not trusted.** An unlock on one chain carries a
+  zero-knowledge proof that the counterparty's deposit really is recorded
+  in the *other* chain's Merkle tree. The destination chain can't read the
+  source chain — the proof carries that fact across.
+
+The relayer that used to approve trades is now a coordinator: it collects
+the two signatures, aggregates them, generates the deposit proofs, and
+submits the unlock transactions. It holds no funds and grants no
+approvals — any honest party could run the same code.
+
+<Note>
+You're reading the **v2** docs, which describe the BLS-authorized flow live
+on Stellar Testnet and Ethereum Sepolia. The pre-BLS design is preserved
+under **v1 (pre-BLS)** in the version picker.
+</Note>
+
+## Where to go next
+
+- [How it works](/v2/how-it-works) — the full trade lifecycle in one page
+- [Quickstart](/v2/quickstart) — bridge your first tokens, including the
+  one-time key registration
+- [Settlement keys](/v2/concepts/settlement-keys) — the per-wallet BLS key
+  every trader registers once
+- [Smart contracts](/v2/reference/smart-contracts) — live testnet addresses

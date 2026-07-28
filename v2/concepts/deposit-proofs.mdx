@@ -1,0 +1,41 @@
+---
+title: "Deposit proofs"
+description: "How one chain verifies a deposit that happened on another — in seconds"
+---
+
+The destination chain can't read the source chain. What carries the fact
+"the counterparty really deposited" across is a **zero-knowledge proof**.
+
+## The Merkle Mountain Range
+
+Every deposit appends a leaf to that chain's on-chain **Merkle Mountain
+Range (MMR)** — an append-only tree whose root commits to every deposit
+ever made. Each leaf binds the trade's order hash and which side of the
+trade it settles, so a proof about one deposit can't be bent to serve
+another.
+
+## The proof
+
+At unlock time, a proof is generated showing that the counterparty's
+deposit leaf is included in the *other* chain's MMR root — the same root
+both parties signed into their SettlementAuth. The contract verifies the
+proof on-chain, together with a **nullifier** that makes each deposit
+unlockable exactly once.
+
+## Speed
+
+Proof generation was the bottleneck of the old flow at ~90 seconds per
+proof. The rebuilt prover generates a deposit proof in **seconds** —
+under the tranche's ≤30-second bar with a wide margin — and a CI benchmark
+fails the build if it ever regresses past the bound. Proofs run in
+background workers, per trade, per chain; users never wait on them.
+
+## Verification on both chains
+
+- **Ethereum** verifies with a generated UltraHonk verifier contract.
+- **Soroban** verifies with a reusable verifier that takes the verification
+  key as data.
+
+Together with the aggregated BLS signature check, this is the whole
+authority chain of a settlement: *both traders signed, and both deposits
+provably exist.* Nothing else is trusted.

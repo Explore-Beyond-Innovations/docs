@@ -1,0 +1,51 @@
+---
+title: "Settlement & keys"
+description: "The v2 endpoints: BLS key registration, co-signing, and settlement status"
+---
+
+The endpoints added in v2, on top of the existing ads/trades API. All are
+under the authenticated `/v1` API.
+
+## Keys
+
+| Endpoint | Purpose |
+| --- | --- |
+| `POST /v1/keys/register/prepare` | per-chain signing material for a registration: live nonces, the proof-of-possession message, and the wallet payload (call once for the PoP messages, again with the PoPs for the typed data) |
+| `POST /v1/keys/register` | relay the signed registration to both chains, gas sponsored |
+| `POST /v1/keys/revoke/prepare` | per-chain signing material for a revocation |
+| `POST /v1/keys/revoke` | relay the signed revocation; refused with `409` while the account has open trades |
+| `GET /v1/keys/:account` | key record + per-chain publication state + live on-chain nonce/commitment |
+
+## Trade settlement
+
+| Endpoint | Purpose |
+| --- | --- |
+| `GET /v1/trades/:id/deposits` | per-leg deposit status (`NONE → PENDING → APPROVED → FINALIZED`) plus a `settlementGrade` flag — poll until true before co-signing |
+| `GET /v1/trades/:id/params` | the canonical order parameters and, once both deposits are settlement-grade, both chains' Merkle roots |
+| `POST /v1/trades/:id/cosign` | upload a party's BLS co-signature over the SettlementAuth |
+| `GET /v1/trades/:id/settlement` | `{state, signaturesCollected, parties, partyKeys}` — the status ladder plus per-party key readiness |
+| `POST /v1/trades/:id/create-data` | re-serve the createOrder transaction data for a still-pending order (retry without a new reservation); `409` once confirmed, `410` after expiry |
+| `POST /v1/trades/:id/unlock` | self-service unlock: transaction data incl. proof + aggregated-signature payload (available from `Aggregated`) |
+
+## Co-sign upload shape
+
+```json
+{
+  "signer": "0x…",        // your wallet — the trade party account
+  "auth": {
+    "domainTag": "0x…",
+    "orderChainId": "11155111",
+    "adChainId": "1000001",
+    "orderHash": "0x…",
+    "orderChainRoot": "0x…",
+    "adChainRoot": "0x…"
+  },
+  "blsSig": "0x…",         // G2 compressed, 96 bytes
+  "blsPubKey": "0x…"       // G1 compressed, 48 bytes
+}
+```
+
+The backend authorizes the signer as a trade party, verifies a confirmed
+key is registered for that wallet on both trade chains, and rejects a
+signature pair signed over different roots. Legible errors tell the client
+exactly which wallet needs registration.

@@ -25,92 +25,157 @@
     }
   },
   "navigation": {
-    "tabs": [
+    "versions": [
       {
-        "tab": "Documentation",
-        "groups": [
+        "version": "v2",
+        "tabs": [
           {
-            "group": "Get Started",
-            "pages": [
-              "introduction",
-              "why-proofbridge",
-              "how-it-works",
-              "quickstart"
+            "tab": "Documentation",
+            "groups": [
+              {
+                "group": "Get Started",
+                "pages": [
+                  "v2/introduction",
+                  "v2/how-it-works",
+                  "v2/quickstart"
+                ]
+              },
+              {
+                "group": "Core Concepts",
+                "pages": [
+                  "v2/concepts/settlement-keys",
+                  "v2/concepts/co-signing",
+                  "v2/concepts/deposit-proofs"
+                ]
+              },
+              {
+                "group": "Architecture",
+                "pages": [
+                  "v2/architecture/overview"
+                ]
+              },
+              {
+                "group": "Reference",
+                "pages": [
+                  "v2/reference/smart-contracts"
+                ]
+              }
             ]
           },
           {
-            "group": "Core Concepts",
-            "pages": [
-              "concepts/makers-and-bridgers",
-              "concepts/liquidity-ads",
-              "concepts/zero-knowledge-proofs",
-              "concepts/merkle-mountain-range",
-              "concepts/order-hashing",
-              "concepts/decimal-scaling",
-              "concepts/supported-networks",
-              "concepts/comparisons"
-            ]
-          },
-          {
-            "group": "Architecture",
-            "pages": [
-              "architecture/overview",
-              "architecture/current-state",
-              "architecture/phase-2-bls-auth",
-              "architecture/phase-3-agents-disputes",
-              "architecture/phase-4-mainnet",
-              "architecture/phase-5-followups"
-            ]
-          },
-          {
-            "group": "Guides",
-            "pages": [
-              "guides/connect-wallet",
-              "guides/faucet",
-              "guides/bridge-tokens",
-              "guides/provide-liquidity",
-              "guides/manage-ads",
-              "guides/track-orders",
-              "guides/integrate-the-sdk"
-            ]
-          },
-          {
-            "group": "Contribute",
-            "pages": [
-              "contribute/run-locally"
-            ]
-          },
-          {
-            "group": "Reference",
-            "pages": [
-              "reference/smart-contracts",
-              "reference/soroban-verifier",
-              "reference/recipient-addresses",
-              "reference/off-chain-signing",
-              "reference/security-model",
-              "reference/roadmap",
-              "reference/faq"
+            "tab": "API Reference",
+            "groups": [
+              {
+                "group": "Overview",
+                "pages": [
+                  "api/overview",
+                  "api/authentication"
+                ]
+              },
+              {
+                "group": "Endpoints",
+                "pages": [
+                  "api/chains",
+                  "api/routes",
+                  "api/ads",
+                  "api/trades",
+                  "v2/api/settlement-and-keys"
+                ]
+              }
             ]
           }
         ]
       },
       {
-        "tab": "API Reference",
-        "groups": [
+        "version": "v1 (pre-BLS)",
+        "tabs": [
           {
-            "group": "Overview",
-            "pages": [
-              "api/overview",
-              "api/authentication"
+            "tab": "Documentation",
+            "groups": [
+              {
+                "group": "Get Started",
+                "pages": [
+                  "introduction",
+                  "why-proofbridge",
+                  "how-it-works",
+                  "quickstart"
+                ]
+              },
+              {
+                "group": "Core Concepts",
+                "pages": [
+                  "concepts/makers-and-bridgers",
+                  "concepts/liquidity-ads",
+                  "concepts/zero-knowledge-proofs",
+                  "concepts/merkle-mountain-range",
+                  "concepts/order-hashing",
+                  "concepts/decimal-scaling",
+                  "concepts/supported-networks",
+                  "concepts/comparisons"
+                ]
+              },
+              {
+                "group": "Architecture",
+                "pages": [
+                  "architecture/overview",
+                  "architecture/current-state",
+                  "architecture/phase-2-bls-auth",
+                  "architecture/phase-3-agents-disputes",
+                  "architecture/phase-4-mainnet",
+                  "architecture/phase-5-followups"
+                ]
+              },
+              {
+                "group": "Guides",
+                "pages": [
+                  "guides/connect-wallet",
+                  "guides/faucet",
+                  "guides/bridge-tokens",
+                  "guides/provide-liquidity",
+                  "guides/manage-ads",
+                  "guides/track-orders",
+                  "guides/integrate-the-sdk"
+                ]
+              },
+              {
+                "group": "Contribute",
+                "pages": [
+                  "contribute/run-locally"
+                ]
+              },
+              {
+                "group": "Reference",
+                "pages": [
+                  "reference/smart-contracts",
+                  "reference/soroban-verifier",
+                  "reference/recipient-addresses",
+                  "reference/off-chain-signing",
+                  "reference/security-model",
+                  "reference/roadmap",
+                  "reference/faq"
+                ]
+              }
             ]
           },
           {
-            "group": "Endpoints",
-            "pages": [
-              "api/ads",
-              "api/trades",
-              "api/routes",
-              "api/chains"
+            "tab": "API Reference",
+            "groups": [
+              {
+                "group": "Overview",
+                "pages": [
+                  "api/overview",
+                  "api/authentication"
+                ]
+              },
+              {
+                "group": "Endpoints",
+                "pages": [
+                  "api/ads",
+                  "api/trades",
+                  "api/routes",
+                  "api/chains"
+                ]
+              }
             ]
           }
         ]
