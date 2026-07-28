@@ -1,0 +1,47 @@
+---
+title: "The BLS auth circuit"
+description: "Signature verification inside a proof — built, measured, and why the live flow verifies natively instead"
+---
+
+Two ways exist to convince a contract that both traders signed:
+
+1. **Verify the aggregated BLS signature directly on-chain** — Ethereum's
+   precompiles and Soroban's host functions can run the pairing check
+   natively.
+2. **Verify it inside a zero-knowledge proof** — a circuit checks the
+   signature and the chain only verifies the (fixed-size) proof.
+
+v2 shipped **both**, and chose the first for the live flow.
+
+## What was built
+
+The auth circuit lives at
+[`proof_circuits/auth`](https://github.com/Explore-Beyond-Innovations/ProofBridge/tree/main/proof_circuits/auth):
+a Noir circuit that verifies an aggregated maker + bridger BLS12-381
+signature over the order digest.
+
+- Proves in **under 30 seconds** on the reference machine — the bar the
+  deliverable set
+- Four-case test pack: valid aggregate · single-signer aggregate ·
+  invalid signature rejected · wrong public key rejected
+- Verifier generation works for both chains
+
+## Why the live flow verifies natively
+
+Measured head-to-head, the native pairing check settles at a **fraction of
+the gas** of verifying a proof of the same statement — and it runs on
+Soroban in under two seconds inside a single transaction. Verifying
+in-circuit would also add ~30 seconds of proving to every settlement for
+no security gain: the statement being proven is exactly the check the
+chain can already run.
+
+So the `CounterpartyVerifier` contract on each chain performs the pairing
+check natively at unlock, and the circuit stands as the **proven fallback
+path** — if a future chain lacks BLS support, or a later design folds
+signature checking into the deposit proof, the circuit is built, tested,
+and benchmarked.
+
+<Note>
+This is a deliberate engineering trade-off, not a de-scope: the circuit
+met its acceptance bar, and the cheaper path won on evidence.
+</Note>

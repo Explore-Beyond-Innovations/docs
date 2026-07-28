@@ -1,0 +1,58 @@
+---
+title: "Merkle Mountain Range"
+sidebarTitle: "Merkle Mountain Range"
+description: "The append-only deposit ledger — and what changed in v2"
+---
+
+Every deposit — a bridger funding an order, a maker locking for one — is
+appended as a leaf to that chain's **Merkle Mountain Range (MMR)**, an
+append-only tree maintained by the `MerkleManager` contract. The tree's
+root commits to every deposit ever made, and the deposit proofs are built
+against it. The fundamentals are unchanged from v1
+(append-only, Poseidon2-hashed, only the escrow contracts may append) —
+this page covers what v2 added.
+
+## Side-bound leaves
+
+A v2 leaf commits to more than the order hash:
+
+```
+leaf = poseidon2(field_mod(orderHash), side)
+```
+
+The `side` records **which side of the trade this deposit settles** — an
+`AdManager` deposit is unlocked on the order side, an `OrderPortal` deposit
+on the ad side. Binding the side into the leaf means a proof about one
+deposit can never be bent to unlock the wrong side of a trade. This was
+part of the T1 hardening set, with a property test guarding it in CI.
+
+## Roots are what you co-sign
+
+Both chains' MMR roots are fields of the
+[SettlementAuth](/v2/concepts/co-signing) each party signs. Your signature
+therefore authorizes settlement against a *specific, known* state of both
+deposit ledgers — if either tree were tampered with afterward, the proofs
+wouldn't verify against the roots you signed.
+
+## The relayer's mirror is a rebuildable projection
+
+The relayer keeps a local mirror of each chain's tree to build proofs
+quickly — but the mirror is a **projection of on-chain events**, not a
+source of truth. It replays the chains' append events and asserts its
+root against the on-chain root at every step; wiped, it rebuilds from the
+chains alone. Nothing about settlement depends on relayer-held state,
+which is what lets anyone run the same code.
+
+## Proofs in seconds
+
+The v2 prover generates an inclusion proof in **seconds** (the v1 flow
+took ~90). Same tree, same verifier family — the speed came from
+algorithmic and witness-generation changes, and a CI benchmark fails the
+build if the bound ever regresses.
+
+## Build on it
+
+The [`proofbridge-mmr`](https://www.npmjs.com/package/proofbridge-mmr)
+npm package produces byte-identical outputs to the on-chain contracts —
+use it to reconstruct a tree from chain events, generate inclusion proofs
+offline, or validate settlement state independently.
