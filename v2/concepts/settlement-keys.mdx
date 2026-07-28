@@ -23,6 +23,23 @@ the key material. The signature is stretched into a valid BLS secret key
 (HKDF, per the IETF BLS KeyGen), and the app stores an encrypted copy
 locally so routine co-signs need only one wallet tap.
 
+### Optional second seed
+
+The wallet signature can be strengthened with a **second seed**, so
+deriving the key takes something you *have* (the wallet) plus something
+you *know or are*:
+
+- **None** (the default today) — the wallet signature alone derives the key
+- **Password** — stretched with Argon2id, so a human passphrase can't be
+  brute-forced even by someone holding the wallet signature
+- **Passkey** — via the WebAuthn PRF extension: a deterministic secret
+  gated by your device's biometrics (fingerprint / Face ID) and synced by
+  the platform (Google Password Manager, iCloud Keychain)
+
+The chosen mode is stored as a non-secret hint on your key record, so a
+fresh device knows which flow to run — the seed itself never leaves your
+device.
+
 The `key #NNNN` counter is the **rotation index**: revoking a key advances
 it, so the replacement key is genuinely different (the message changes, so
 the wallet signature changes, so the key changes).
