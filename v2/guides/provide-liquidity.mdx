@@ -26,8 +26,10 @@ per-trade limits. Submit the `createAd` transaction from your wallet.
 ## 2. Serve trades
 
 When a bridger opens an order against your ad, the matching slice of your
-pool is reserved. You (or your bot) lock it on-chain, then co-sign after
-both deposits confirm.
+pool is reserved for that trade. Two actions are yours: **lock** the
+reserved funds on-chain (this is your deposit into the trade), then
+**co-sign** once both deposits confirm — your half of the two signatures
+every settlement needs.
 
 <Frame caption="Lock and co-sign actions on an incoming trade">
   <img src="/images/v2/liquidity-02-lock.png" alt="Lock tokens action" />

@@ -23,8 +23,10 @@ other chain).
 
 ## 2. Create and fund the order
 
-Confirm the deposit transaction in your wallet (ERC-20 routes approve
-first). Your tokens enter the OrderPortal escrow.
+Confirm the deposit transaction in your wallet (ERC-20 routes ask for an
+approval first, so expect two prompts). Your tokens go into the
+OrderPortal — the escrow contract on your chain — where they stay locked
+until the trade settles or you get them back.
 
 <Frame caption="Deposit confirmation in the wallet">
   <img src="/images/v2/bridge-02-deposit.png" alt="Wallet deposit confirmation" />
@@ -43,7 +45,8 @@ trade shows **Locked**.
 
 ## 4. Co-sign
 
-When both deposits are settlement-grade the **Co-sign** button lights up.
+When both deposits are **settlement-grade** — confirmed deeply enough to
+settle against, usually under a minute — the **Co-sign** button lights up.
 One wallet signature unlocks your settlement key; the key signs the trade
 silently — no transaction, no gas.
 
