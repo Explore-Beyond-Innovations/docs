@@ -1,0 +1,77 @@
+---
+title: "Trades"
+description: "Create, fund, lock, and confirm trades — no authorization token anywhere"
+---
+
+The bridger-side lifecycle. Settlement endpoints (deposits, params, co-sign,
+status) are documented in [Settlement & keys](/v2/api/settlement-and-keys).
+
+<Note>
+v2 responses contain **order parameters only**. The v1 `signature`,
+`authToken`, and `timeToExpire` fields are gone — the contracts no longer
+accept them.
+</Note>
+
+## Endpoints
+
+| Endpoint | Purpose |
+| --- | --- |
+| `GET /v1/trades/all` | list trades — filter by `status`, `adCreatorAddress`, `bridgerAddress`, `participantAddresses`, amounts; cursor-paginated |
+| `GET /v1/trades/:id` | one trade with its route and token details |
+| `POST /v1/trades/create` | create a trade → the `createOrder` transaction data for the order chain |
+| `POST /v1/trades/:id/create-data` | re-serve the same transaction data for a still-pending (INACTIVE) trade — retry without a new reservation; `409` once confirmed, `410` after expiry |
+| `POST /v1/trades/:id/lock` | maker side: the `lockForOrder` transaction data for the ad chain |
+| `POST /v1/trades/:id/confirm` | confirm a create/lock landed — decided by on-chain state |
+| `POST /v1/trades/:id/unlock` | self-service unlock transaction data (proof + aggregated signature) |
+| `POST /v1/trades/:id/unlock/confirm` | confirm an unlock landed |
+
+## Create a trade
+
+```json
+POST /v1/trades/create
+{
+  "adId": "123e4567-e89b-12d3-a456-426614174000",
+  "routeId": "123e4567-e89b-12d3-a456-426614174000",
+  "amount": "1000000",
+  "bridgerDstAddress": "0x…"
+}
+```
+
+Response — the trade record plus everything the wallet needs to submit
+`createOrder` on the order chain:
+
+```json
+{
+  "tradeId": "…",
+  "reqContractDetails": {
+    "chainId": "11155111",
+    "chainKind": "EVM",
+    "contractAddress": "0x…",       // the OrderPortal
+    "orderHash": "0x…",
+    "orderParams": { /* the full struct the contract call takes */ }
+  }
+}
+```
+
+Creating a trade **reserves** the matching slice of the maker's ad before
+any money moves. One pending reservation per bridger per ad — calling
+create again replaces the previous one. A reservation whose deposit never
+lands is cancelled server-side after ~30 minutes (status `CANCELLED`) and
+the liquidity is released.
+
+## Trade statuses
+
+| Status | Meaning |
+| --- | --- |
+| `INACTIVE` | created, deposit not yet confirmed — retry via `create-data` |
+| `ACTIVE` | bridger deposit confirmed; waiting on the maker's lock |
+| `LOCKED` | both escrows committed — settlement in progress |
+| `COMPLETED` | both sides claimed |
+| `CANCELLED` | reservation expired or replaced before any deposit |
+
+## Confirm is chain-state-driven
+
+`POST /v1/trades/:id/confirm` reads the escrow's order status on-chain and
+ignores the request body beyond logging. If the action isn't observable yet
+and you supplied a plausible `txHash`, the response is `202 pending` —
+retry shortly. No signature accompanies any confirm.

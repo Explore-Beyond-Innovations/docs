@@ -77,6 +77,8 @@
                 "pages": [
                   "api/chains",
                   "api/routes",
+                  "v2/api/ads",
+                  "v2/api/trades",
                   "v2/api/settlement-and-keys"
                 ]
               }

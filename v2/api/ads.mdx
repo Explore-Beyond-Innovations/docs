@@ -1,0 +1,66 @@
+---
+title: "Ads"
+description: "Maker liquidity: create, fund, withdraw, update, and close ads"
+---
+
+The maker-side API. Like every v2 endpoint, responses carry contract call
+data only — no authorization token or relayer signature.
+
+## Endpoints
+
+| Endpoint | Purpose |
+| --- | --- |
+| `GET /v1/ads` | list ads — filter by `status`, `creatorAddresses`, route; cursor-paginated |
+| `GET /v1/ads/:id` | one ad with its route, pool, and limits |
+| `POST /v1/ads/create` | create an ad → the `createAd` transaction data for the ad chain |
+| `POST /v1/ads/:id/fund` | top up the pool → `fundAd` transaction data |
+| `POST /v1/ads/:id/withdraw` | withdraw from the pool → transaction data |
+| `PATCH /v1/ads/:id/update` | change limits / metadata |
+| `POST /v1/ads/:id/close` | close the ad and reclaim liquidity |
+| `POST /v1/ads/:id/confirm` | confirm a pending ad action landed on-chain |
+
+## Create an ad
+
+```json
+POST /v1/ads/create
+{
+  "routeId": "123e4567-e89b-12d3-a456-426614174000",
+  "creatorDstAddress": "0x…",       // where you receive on the order chain
+  "fundAmount": "1000000000000000000",
+  "minAmount": "100000000000000000",   // optional
+  "maxAmount": "5000000000000000000",  // optional
+  "metadata": { "title": "My Ad" }     // optional
+}
+```
+
+Response — the data for the `createAd` transaction on the ad chain:
+
+```json
+{
+  "chainId": "1000001",
+  "chainKind": "STELLAR",
+  "contractAddress": "…",            // the AdManager
+  "adId": "…",
+  "adToken": "…",
+  "initialAmount": "1000000000000000000",
+  "orderChainId": "11155111",
+  "adRecipient": "…"
+}
+```
+
+Submit the transaction from the maker wallet, then
+`POST /v1/ads/:id/confirm`. Fund, withdraw, update, and close follow the
+same pattern: request → transaction data → wallet submits → confirm.
+
+## Accounting
+
+An ad's **available** liquidity is its on-chain pool minus the unreleased
+holds of open trades. Trade reservations that expire or get replaced
+release their hold automatically — see
+[Trades](/v2/api/trades) for the reservation lifecycle.
+
+<Warning>
+Before creating an ad, the maker wallet needs a registered
+[settlement key](/v2/concepts/settlement-keys) — every trade on the ad
+will require the maker's co-signature.
+</Warning>
