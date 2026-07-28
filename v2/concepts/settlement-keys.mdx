@@ -40,6 +40,10 @@ The chosen mode is stored as a non-secret hint on your key record, so a
 fresh device knows which flow to run — the seed itself never leaves your
 device.
 
+<Frame caption="The derivation signature in the wallet — note the message text and the key index">
+  <img src="/images/v2/keys-01-derivation.png" alt="Wallet signature request showing the BLS derivation message" />
+</Frame>
+
 The `key #NNNN` counter is the **rotation index**: revoking a key advances
 it, so the replacement key is genuinely different (the message changes, so
 the wallet signature changes, so the key changes).

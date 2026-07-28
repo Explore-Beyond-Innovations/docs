@@ -17,8 +17,12 @@ On the **Bridge** tab, choose source and destination, enter the amount,
 and set the destination address (defaults to your linked wallet on the
 other chain).
 
-<Frame caption="Route and amount selection">
-  <img src="/images/v2/bridge-01-route.png" alt="Bridge tab route selection" />
+<Frame caption="The marketplace — filter the route, pick an ad">
+  <img src="/images/v2/bridge-01-route.png" alt="Bridge marketplace with route filters and ads" />
+</Frame>
+
+<Frame caption="Set the amount — what you pay is what you get, 1:1">
+  <img src="/images/v2/bridge-01b-amount.png" alt="Bridge amount dialog" />
 </Frame>
 
 ## 2. Create and fund the order
@@ -28,8 +32,12 @@ approval first, so expect two prompts). Your tokens go into the
 OrderPortal — the escrow contract on your chain — where they stay locked
 until the trade settles or you get them back.
 
-<Frame caption="Deposit confirmation in the wallet">
-  <img src="/images/v2/bridge-02-deposit.png" alt="Wallet deposit confirmation" />
+<Frame caption="Deposit confirmation — the wallet interacts with the OrderPortal escrow directly">
+  <img src="/images/v2/bridge-02-deposit.png" alt="MetaMask deposit confirmation with the bridge stage tracker" />
+</Frame>
+
+<Frame caption="Order submitted — the maker's side takes over">
+  <img src="/images/v2/bridge-02b-submitted.png" alt="Order submitted confirmation" />
 </Frame>
 
 Closed the popup by mistake? The order waits on the
@@ -50,8 +58,8 @@ settle against, usually under a minute — the **Co-sign** button lights up.
 One wallet signature unlocks your settlement key; the key signs the trade
 silently — no transaction, no gas.
 
-<Frame caption="Co-sign on the trade card">
-  <img src="/images/v2/bridge-03-cosign.png" alt="Co-sign button on trade card" />
+<Frame caption="Co-sign — instant, no gas">
+  <img src="/images/v2/bridge-03-cosign.png" alt="Co-sign settlement dialog" />
 </Frame>
 
 ## 5. Done — the rest is automatic
@@ -62,6 +70,10 @@ proofs, and submit the unlocks on both chains:
 ```
 Signed (2/2) → Aggregated → Settling → Filled
 ```
+
+<Frame caption="Co-signature in — settlement completes automatically">
+  <img src="/images/v2/bridge-04-cosigned.png" alt="Co-signature submitted confirmation" />
+</Frame>
 
 Your bridged tokens arrive at the destination address. The trade page
 links both unlock transactions.
