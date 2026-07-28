@@ -43,8 +43,8 @@
               {
                 "group": "Core Concepts",
                 "pages": [
-                  "concepts/makers-and-bridgers",
-                  "concepts/liquidity-ads",
+                  "v2/concepts/makers-and-bridgers",
+                  "v2/concepts/liquidity-ads",
                   "v2/concepts/settlement-keys",
                   "v2/concepts/co-signing",
                   "v2/concepts/deposit-proofs",

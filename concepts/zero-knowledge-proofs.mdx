@@ -99,9 +99,9 @@ Because the proof has to verify on-chain on both sides:
 
 These guarantees come from the on-chain Verifier rejecting the proof if any constraint fails — not from any off-chain authority.
 
-<Warning>
-  BLS signature aggregation — which will let both counterparties co-sign a proof of agreement so the relayer is no longer the trusted authorizer of trade matching — is on the [roadmap](/reference/roadmap). Funds are protected today by the on-chain proof verification described above; the BLS milestone removes the relayer's role in *initiating* settlement, not in verifying it.
-</Warning>
+<Note>
+  Since v2, the proof is only half of the authority chain: settlement also requires **both counterparties' aggregated BLS signature**, verified on-chain against the key registry — and the Merkle roots the proof is checked against are the very roots both parties [co-signed](/v2/concepts/co-signing). The relayer initiates nothing on its own authority; it aggregates, proves, and submits what the two traders authorized.
+</Note>
 
 ## Related references
 

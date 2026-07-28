@@ -1,0 +1,77 @@
+---
+title: "Liquidity ads: how the ProofBridge marketplace works"
+sidebarTitle: "Liquidity ads"
+description: "A liquidity ad is an on-chain offer from a Maker to provide cross-chain liquidity. How ads are created, reserved, locked, and settled in v2."
+---
+
+A liquidity ad is the on-chain offer that makes peer-to-peer bridging
+possible. When a Maker posts an ad, they're committing liquidity in a
+specific token on one chain against deposits of a specific token on
+another. Bridgers pick the route that matches their transfer.
+
+## What a liquidity ad contains
+
+- **The route** — which token a Bridger deposits, and which token (on
+  which chain) the Maker provides. Tokens exchange **1:1 by value**;
+  amounts are aligned across differing token decimals automatically
+  ([decimal scaling](/concepts/decimal-scaling)).
+- **Pool amount** — the total liquidity the Maker has escrowed
+- **Min / max per trade** — optional limits
+- **Ad ID** — the identifier orders and proofs reference
+
+These live on-chain in the `AdManager` contract; the app's routes are
+built from them.
+
+## Ad lifecycle
+
+<Steps>
+  <Step title="Create + fund">
+    The Maker submits `createAd` and escrows the pool. Only funded ads
+    serve orders.
+  </Step>
+  <Step title="Reserved by an order">
+    A Bridger creates an order against the ad — the matching slice of the
+    pool is **reserved** before any money moves. Reservations from orders
+    that never fund expire after ~30 minutes and release automatically,
+    so abandoned checkouts can't strand liquidity.
+  </Step>
+  <Step title="Locked for the order">
+    Once the Bridger's deposit confirms, the Maker locks the reserved
+    liquidity on-chain (`lockForOrder`) — the Maker's deposit into this
+    trade. Both deposits are appended to their chain's Merkle Mountain
+    Range.
+  </Step>
+  <Step title="Co-signed">
+    Both parties sign the settlement with their
+    [settlement keys](/v2/concepts/settlement-keys) — the trade cannot
+    settle without both signatures.
+  </Step>
+  <Step title="Settled">
+    Background workers combine the signatures, prove both deposits, and
+    submit the unlocks. Each chain verifies the aggregated signature and
+    the proof, then releases funds to the respective recipients.
+  </Step>
+  <Step title="Closed">
+    After open trades settle, the Maker can close the ad and reclaim the
+    remaining pool. Unlocked funds can be withdrawn at any time.
+  </Step>
+</Steps>
+
+## Available vs pool
+
+The amount a new order can take is the on-chain pool **minus the holds of
+open trades** (reservations + locks). The [Manage ads](/v2/guides/manage-ads)
+guide covers funding, withdrawing, and the ad statuses.
+
+<Warning>
+  Don't close an ad while trades are in progress — locked amounts stay
+  reserved until their trades settle.
+</Warning>
+
+## What prevents double-spends
+
+Each settlement consumes a **nullifier** — a one-time value bound to the
+trade and side. Once recorded on-chain, any replay of the same proof is
+rejected, independently on each chain. Together with the side-bound MMR
+leaves and the co-signed roots, a deposit settles exactly once, in exactly
+one direction, with both parties' consent.

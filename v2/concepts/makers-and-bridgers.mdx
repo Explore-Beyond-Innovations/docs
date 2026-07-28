@@ -1,0 +1,98 @@
+---
+title: "Makers and Bridgers: understanding ProofBridge roles"
+sidebarTitle: "Makers & Bridgers"
+description: "ProofBridge has two roles: Makers who provide cross-chain liquidity and Bridgers who transfer assets. Both co-sign every settlement."
+---
+
+Every cross-chain transfer involves two parties: a **Maker** who provides
+liquidity on the destination chain, and a **Bridger** who wants to move
+assets from one chain to another. Neither party needs to trust the other —
+settlement requires **both parties' BLS co-signatures** and an on-chain
+zero-knowledge proof of each deposit.
+
+## The two roles
+
+<CardGroup cols={2}>
+  <Card title="Maker" icon="droplet">
+    A liquidity provider who locks tokens on the destination chain and
+    receives the Bridger's source tokens at settlement. Makers post
+    liquidity ads to attract Bridgers — many run the market-maker bot and
+    serve trades hands-free.
+  </Card>
+  <Card title="Bridger" icon="bridge">
+    A user moving assets across chains. Bridgers deposit source tokens
+    against a matching ad and receive destination tokens from the Maker's
+    locked liquidity.
+  </Card>
+</CardGroup>
+
+Both roles share one prerequisite: the trading wallet needs a registered
+[settlement key](/v2/concepts/settlement-keys) — a one-time step — because
+every trade settles only with both parties' signatures.
+
+## How Makers work
+
+<Steps>
+  <Step title="Create and fund an ad">
+    Post an ad for a route (say, USDC on Sepolia → USDC on Stellar) and
+    deposit liquidity into the `AdManager` contract. Tokens exchange 1:1
+    by value — amounts are aligned across token decimals automatically.
+  </Step>
+  <Step title="Lock for an order">
+    When a Bridger funds an order against your ad, lock the matching
+    liquidity — this is your deposit into the trade. The bot does this
+    automatically.
+  </Step>
+  <Step title="Co-sign">
+    Once both deposits confirm, sign the settlement with your settlement
+    key — silently, no transaction. The bot signs by itself.
+  </Step>
+  <Step title="Receive source tokens">
+    Background workers aggregate the two signatures, prove both deposits,
+    and submit the unlocks. Your recipient address receives the Bridger's
+    tokens.
+  </Step>
+</Steps>
+
+## How Bridgers work
+
+<Steps>
+  <Step title="Pick a route and deposit">
+    Choose a route with available liquidity, enter the amount, and fund
+    the order — your tokens go into the `OrderPortal` escrow. Native ETH
+    and XLM wrap automatically.
+  </Step>
+  <Step title="Co-sign">
+    When both deposits confirm, one click signs the settlement with your
+    settlement key. This is your authorization — the trade cannot settle
+    without it.
+  </Step>
+  <Step title="Receive destination tokens">
+    The same background pipeline settles both chains; your destination
+    tokens arrive at your recipient address.
+  </Step>
+</Steps>
+
+<Note>
+  No sign-up is required. Your connected wallet is your identity, and your
+  settlement key derives from a wallet signature.
+</Note>
+
+## Comparing the two roles
+
+| | Maker | Bridger |
+|---|---|---|
+| **Primary action** | Posts liquidity ads | Opens orders against ads |
+| **What you lock** | Destination-chain tokens | Source-chain tokens |
+| **What you receive** | Bridger's source tokens | Maker's destination tokens |
+| **Co-signature** | Required — bot can sign for you | Required — one click |
+| **On-chain contract** | `AdManager` | `OrderPortal` |
+
+## Settlement: how both parties receive their tokens
+
+Settlement needs three things, all verified on-chain: your signature, the
+counterparty's signature (combined into one), and a zero-knowledge proof
+of each deposit. The relayer aggregates, proves, and submits — it cannot
+forge either signature, cannot fabricate a deposit, and holds no funds.
+Neither party can receive funds without the other side's deposit provably
+existing.
